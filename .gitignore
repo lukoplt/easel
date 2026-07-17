@@ -14,6 +14,11 @@ artifacts/
 .DS_Store
 Thumbs.db
 
+## Never commit customer apps / packages
+*.msapp
+*.zip
+!**/fixtures/**/*.zip
+
 ## pacheck runtime
 .pacheck-baseline.json
 !tests/**/.pacheck-baseline.json

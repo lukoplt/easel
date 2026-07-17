@@ -1,0 +1,4 @@
+App:
+  Properties:
+    OnStart: =Set(gblReal, 1)
+    StartScreen: =Home

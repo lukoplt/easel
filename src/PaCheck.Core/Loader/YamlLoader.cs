@@ -26,15 +26,12 @@ public static class YamlLoader
         var docs = new List<LoadedYamlDoc>();
         var diags = new List<LoadDiagnostic>();
 
-        // The unpacked layout puts sources under Src/ (pac) but also support a flat folder.
-        var searchRoots = new[] { Path.Combine(root, "Src"), root }
-            .Where(Directory.Exists)
-            .Distinct()
-            .ToArray();
-        var searchRoot = searchRoots.FirstOrDefault(root) ?? root;
-
+        // pa.yaml sources can live at Src/ (flat folders) or Other/Src/ (pac solution
+        // unpack, which also emits legacy *.fx.yaml alongside). Search the whole tree for
+        // *.pa.yaml and skip editor-state files, which are metadata, not app content.
         var files = Directory
-            .EnumerateFiles(searchRoot, "*.pa.yaml", SearchOption.AllDirectories)
+            .EnumerateFiles(root, "*.pa.yaml", SearchOption.AllDirectories)
+            .Where(f => !IsEditorState(f))
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in files)
@@ -62,5 +59,14 @@ public static class YamlLoader
         }
 
         return new YamlLoadResult(docs, diags, root);
+    }
+
+    /// <summary>Editor-state files hold Studio metadata, not app content — exclude them.</summary>
+    private static bool IsEditorState(string path)
+    {
+        var name = Path.GetFileName(path);
+        return name.StartsWith("_EditorState", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("editorstate", StringComparison.OrdinalIgnoreCase)
+            || path.Replace('\\', '/').Contains("/EditorState/", StringComparison.OrdinalIgnoreCase);
     }
 }

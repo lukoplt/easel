@@ -29,7 +29,12 @@ public static class RenameEngine
         var rx = new Regex($@"\b{Regex.Escape(oldName)}\b");
         int filesChanged = 0, total = 0;
 
-        foreach (var file in Directory.EnumerateFiles(folder, "*.pa.yaml", SearchOption.AllDirectories))
+        // pac may keep both the new (*.pa.yaml) and legacy (*.fx.yaml) source formats in an
+        // unpacked app. Rename across both so the repacked app stays consistent.
+        var files = Directory.EnumerateFiles(folder, "*.pa.yaml", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(folder, "*.fx.yaml", SearchOption.AllDirectories));
+
+        foreach (var file in files)
         {
             var text = File.ReadAllText(file);
             int count = rx.Matches(text).Count;

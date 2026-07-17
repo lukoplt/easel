@@ -1,0 +1,3 @@
+Home As screen:
+    lblLegacy As label:
+        Text: ="legacy - must not be loaded"

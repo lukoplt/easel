@@ -1,0 +1,10 @@
+Screens:
+  Home:
+    Properties:
+      Fill: =gblReal
+    Children:
+      - lblReal:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="hello"
+            AccessibleLabel: ="Greeting"

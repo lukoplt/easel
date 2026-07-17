@@ -55,8 +55,32 @@ public static class SourcePreparer
             }
 
             case InputKind.SolutionZip:
-                throw new InputException(
-                    "Solution .zip inputs are not supported yet. Extract the canvas .msapp and pass it directly.");
+            {
+                var pac = PacRunner.Create();
+                var extractDir = PacRunner.TempFolderFor(path) + "-sol";
+                if (Directory.Exists(extractDir)) Directory.Delete(extractDir, recursive: true);
+                log?.Invoke($"Extracting solution {Path.GetFileName(path)}…");
+                System.IO.Compression.ZipFile.ExtractToDirectory(path, extractDir);
+
+                var msapps = Directory
+                    .EnumerateFiles(extractDir, "*.msapp", SearchOption.AllDirectories)
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (msapps.Count == 0)
+                    throw new InputException("No canvas app (.msapp) found in the solution.");
+                if (msapps.Count > 1)
+                    throw new InputException(
+                        $"Solution contains {msapps.Count} canvas apps. Pass one directly:\n  " +
+                        string.Join("\n  ", msapps));
+
+                var dest = PacRunner.TempFolderFor(msapps[0]);
+                if (Directory.Exists(dest)) Directory.Delete(dest, recursive: true);
+                log?.Invoke($"Unpacking {Path.GetFileName(msapps[0])} via pac…");
+                pac.UnpackMsapp(msapps[0], dest, line => log?.Invoke(line));
+                try { Directory.Delete(extractDir, recursive: true); } catch { /* best effort */ }
+                return new PreparedSource(dest, resolved.Kind, path, isTemp: true, keep: keepTemp);
+            }
 
             default:
                 throw new InputException(resolved.Message);

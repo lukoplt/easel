@@ -1,0 +1,3 @@
+ControlStates:
+  ghostControl:
+    Text: ="editor state - must not be loaded"
