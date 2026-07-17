@@ -1,6 +1,6 @@
 # Configuration
 
-pacheck reads `.pacheck.yml` (or `.pacheck.yaml`), searching **upward** from the analysed
+easel reads `.easel.yml` (or `.easel.yaml`), searching **upward** from the analysed
 path. Pass `--config <file>` to override discovery.
 
 ## Shape
@@ -59,12 +59,12 @@ ignore:
 
 ## Baseline
 
-Separate from config. `pacheck lint --write-baseline` records current findings into
-`.pacheck-baseline.json` (line-independent fingerprints). Later runs auto-suppress
+Separate from config. `easel lint --write-baseline` records current findings into
+`.easel-baseline.json` (line-independent fingerprints). Later runs auto-suppress
 baselined findings and report only new ones. Point elsewhere with `--baseline <file>`.
 
 ## Tolerance
 
-An unknown key or a malformed config never aborts a run — pacheck falls back to defaults.
+An unknown key or a malformed config never aborts a run — easel falls back to defaults.
 This mirrors the loader's tolerance of unknown `pa.yaml` keys, so schema evolution does not
 break analysis.

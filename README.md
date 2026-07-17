@@ -1,4 +1,4 @@
-# pacheck
+# easel
 
 Static analysis, dependency analysis, metrics, secrets scanning, semantic diff and
 rename for **Power Apps canvas source** (`pa.yaml`).
@@ -8,7 +8,7 @@ rename for **Power Apps canvas source** (`pa.yaml`).
 > versions, and rename symbols — all deterministic, CI-first, read-only by default.
 
 ```
-$ pacheck lint ./MyApp
+$ easel lint ./MyApp
 Src/scrHome.pa.yaml
   23:9    warning PA1009 Interactive control 'btnSubmit' (Button) has no AccessibleLabel.
   27:23   info    PA1010 'If' nested 3 deep (threshold 2).
@@ -20,7 +20,7 @@ Src/App.pa.yaml
 
 ## Why
 
-Power CAT and the checker target review inside a tenant. pacheck targets the **dev loop**:
+Power CAT and the checker target review inside a tenant. easel targets the **dev loop**:
 run it locally and in CI over the `pa.yaml` you already commit, get machine-readable
 output (JSON / SARIF), and gate pull requests.
 
@@ -33,21 +33,21 @@ output (JSON / SARIF), and gate pull requests.
 
 ```bash
 dotnet tool install --global Microsoft.PowerApps.CLI.Tool   # pac
-dotnet tool install --global PaCheck.Tool                    # pacheck
-pacheck doctor                                               # verify the environment
+dotnet tool install --global Easel.Tool                    # easel
+easel doctor                                               # verify the environment
 ```
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `pacheck lint <path>` | Run rules, report findings (`--format console\|json\|sarif\|html`). |
-| `pacheck stats <path>` | Metrics: controls/screen, media size, complexity. |
-| `pacheck analyze <path>` | `--find <sym>`, `--dead-code`, `--impact <sym>`, `--graph mermaid\|dot`. |
-| `pacheck secrets <path>` | Secret scan + data-source inventory. |
-| `pacheck diff <base> <head>` | Semantic diff (`--format console\|markdown\|json`). |
-| `pacheck rename <msapp> --from X --to Y` | Rename a symbol and repack (**preview**). |
-| `pacheck doctor` | Environment diagnostics. |
+| `easel lint <path>` | Run rules, report findings (`--format console\|json\|sarif\|html`). |
+| `easel stats <path>` | Metrics: controls/screen, media size, complexity. |
+| `easel analyze <path>` | `--find <sym>`, `--dead-code`, `--impact <sym>`, `--graph mermaid\|dot`. |
+| `easel secrets <path>` | Secret scan + data-source inventory. |
+| `easel diff <base> <head>` | Semantic diff (`--format console\|markdown\|json`). |
+| `easel rename <msapp> --from X --to Y` | Rename a symbol and repack (**preview**). |
+| `easel doctor` | Environment diagnostics. |
 
 `<path>` is an unpacked source folder **or** a `.msapp` file.
 
@@ -63,8 +63,8 @@ pacheck doctor                                               # verify the enviro
 
 ## Configuration
 
-Drop a `.pacheck.yml` at your repo root (searched upward). See
-[`docs/configuration.md`](docs/configuration.md) and the sample [`.pacheck.yml`](.pacheck.yml).
+Drop a `.easel.yml` at your repo root (searched upward). See
+[`docs/configuration.md`](docs/configuration.md) and the sample [`.easel.yml`](.easel.yml).
 
 ```yaml
 rules:
@@ -76,11 +76,11 @@ ignore:
   - "**/Legacy*.pa.yaml"
 ```
 
-**Baseline** — adopt pacheck on a legacy app without drowning in findings:
+**Baseline** — adopt easel on a legacy app without drowning in findings:
 
 ```bash
-pacheck lint ./MyApp --write-baseline   # record today's findings
-pacheck lint ./MyApp                     # subsequent runs report only new ones
+easel lint ./MyApp --write-baseline   # record today's findings
+easel lint ./MyApp                     # subsequent runs report only new ones
 ```
 
 ## Rules
@@ -117,12 +117,12 @@ see [`docs/ci.md`](docs/ci.md).
 ```bash
 dotnet build
 dotnet test
-dotnet run --project src/PaCheck.Cli -- lint tests/fixtures/SampleApp
+dotnet run --project src/Easel.Cli -- lint tests/fixtures/SampleApp
 ```
 
 ## Architecture
 
-See [`pacheck-architektura-a-tasky.md`](pacheck-architektura-a-tasky.md) for the full
+See [`easel-architektura-a-tasky.md`](easel-architektura-a-tasky.md) for the full
 design. In short: `pac`/folder → YAML loader → immutable `AppModel` → Power Fx AST
 (cached) → symbol table + dependency graph → commands → renderers. The model, symbols
 and graph are built **once** and shared across commands.

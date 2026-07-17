@@ -1,12 +1,12 @@
 name: Bug report
-description: Something pacheck did wrong (crash, wrong finding, bad output).
+description: Something easel did wrong (crash, wrong finding, bad output).
 labels: [bug]
 body:
   - type: input
     id: version
     attributes:
-      label: pacheck version
-      description: Output of `pacheck --version`.
+      label: easel version
+      description: Output of `easel --version`.
       placeholder: "0.1.0"
     validations:
       required: true

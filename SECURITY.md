@@ -5,15 +5,15 @@
 Please report security issues privately via GitHub Security Advisories
 ("Report a vulnerability" on the repository's **Security** tab) rather than a public issue.
 
-Include: affected version (`pacheck --version`), reproduction steps, and impact. We aim to
+Include: affected version (`easel --version`), reproduction steps, and impact. We aim to
 acknowledge within a few days.
 
 ## Scope
 
-pacheck is a read-only static analysis CLI (the only writing command is `rename`, which
+easel is a read-only static analysis CLI (the only writing command is `rename`, which
 writes a new file and never modifies its input). Relevant concerns:
 
-- **Untrusted input** — pacheck parses arbitrary `pa.yaml`. Parsing is tolerant and must
+- **Untrusted input** — easel parses arbitrary `pa.yaml`. Parsing is tolerant and must
   never execute app logic; formulas are parsed, never evaluated. A crash on malformed input
   is a bug worth reporting.
 - **Subprocess** — `pac` is invoked with an explicit argument list (no shell), only for

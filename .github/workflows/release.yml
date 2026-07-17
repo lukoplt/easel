@@ -22,7 +22,7 @@ jobs:
 
       - name: Publish self-contained single file
         run: >
-          dotnet publish src/PaCheck.Cli/PaCheck.Cli.csproj
+          dotnet publish src/Easel.Cli/Easel.Cli.csproj
           -c Release -r ${{ matrix.rid }} --self-contained true
           -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
           -o out/${{ matrix.rid }}
@@ -31,17 +31,17 @@ jobs:
         run: |
           cd out/${{ matrix.rid }}
           if [ "${{ matrix.rid }}" = "win-x64" ]; then
-            zip -r "../../pacheck-${{ matrix.rid }}.zip" pacheck.exe
+            zip -r "../../easel-${{ matrix.rid }}.zip" easel.exe
           else
-            tar -czf "../../pacheck-${{ matrix.rid }}.tar.gz" pacheck
+            tar -czf "../../easel-${{ matrix.rid }}.tar.gz" easel
           fi
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            pacheck-${{ matrix.rid }}.zip
-            pacheck-${{ matrix.rid }}.tar.gz
+            easel-${{ matrix.rid }}.zip
+            easel-${{ matrix.rid }}.tar.gz
 
   nuget:
     name: Publish dotnet tool
@@ -53,7 +53,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Pack
-        run: dotnet pack src/PaCheck.Cli/PaCheck.Cli.csproj -c Release -o nupkg
+        run: dotnet pack src/Easel.Cli/Easel.Cli.csproj -c Release -o nupkg
 
       - name: Push to NuGet
         env:

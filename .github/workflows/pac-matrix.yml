@@ -31,4 +31,4 @@ jobs:
         run: dotnet test -c Release --no-build
 
       - name: doctor (reports detected pac version vs min supported)
-        run: dotnet run -c Release --project src/PaCheck.Cli -- doctor
+        run: dotnet run -c Release --project src/Easel.Cli -- doctor

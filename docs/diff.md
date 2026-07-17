@@ -3,7 +3,7 @@
 Semantic comparison of two app versions.
 
 ```bash
-pacheck diff <base> <head> [--format console|markdown|json] [--output <file>]
+easel diff <base> <head> [--format console|markdown|json] [--output <file>]
 ```
 
 Both `<base>` and `<head>` are unpacked source folders or `.msapp` files.
@@ -19,7 +19,7 @@ Both `<base>` and `<head>` are unpacked source folders or `.msapp` files.
 
 ## AST-level property diff
 
-Rather than a character diff, pacheck reports what changed semantically: functions and
+Rather than a character diff, easel reports what changed semantically: functions and
 identifiers added/removed. Whitespace-only edits are ignored.
 
 ```

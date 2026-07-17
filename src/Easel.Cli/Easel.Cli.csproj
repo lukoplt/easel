@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Easel.Core\Easel.Core.csproj" />
+    <ProjectReference Include="..\Easel.Fx\Easel.Fx.csproj" />
+    <ProjectReference Include="..\Easel.Pac\Easel.Pac.csproj" />
+    <ProjectReference Include="..\Easel.Rules\Easel.Rules.csproj" />
+    <ProjectReference Include="..\Easel.Analysis\Easel.Analysis.csproj" />
+    <ProjectReference Include="..\Easel.Output\Easel.Output.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.57.2" />
+    <PackageReference Include="System.CommandLine" Version="2.0.10" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>easel</AssemblyName>
+    <RootNamespace>Easel.Cli</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- dotnet tool packaging -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>easel</ToolCommandName>
+    <PackageId>Easel.Tool</PackageId>
+    <Description>Static analysis, dependency analysis, metrics, secrets scan, diff and rename for Power Apps canvas source (pa.yaml).</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/easel/easel</PackageProjectUrl>
+    <PackageTags>powerapps;canvas;powerfx;linter;static-analysis;cli</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

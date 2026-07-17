@@ -1,7 +1,7 @@
 # Rule reference
 
 Every rule has a stable id (`PAxxxx` / `PFxxxx`), a name, a category and a default
-severity. Configure any rule by id or name in `.pacheck.yml` (see
+severity. Configure any rule by id or name in `.easel.yml` (see
 [configuration](configuration.md)). Disable with `off`, or change `severity`.
 
 Severities: `error`, `warning`, `info`.
@@ -106,5 +106,5 @@ A URL of the form `https://user:pass@host`.
 
 ### PF0001 — unparsable-formula · error
 A formula Power Fx could not parse. Fix the syntax, or (for legacy apps) re-open and
-re-save in Power Apps Studio to export the current `pa.yaml` format. pacheck never crashes
+re-save in Power Apps Studio to export the current `pa.yaml` format. easel never crashes
 on an unparsable formula — it reports it and continues.

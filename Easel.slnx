@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Easel.Analysis/Easel.Analysis.csproj" />
+    <Project Path="src/Easel.Cli/Easel.Cli.csproj" />
+    <Project Path="src/Easel.Core/Easel.Core.csproj" />
+    <Project Path="src/Easel.Fx/Easel.Fx.csproj" />
+    <Project Path="src/Easel.Output/Easel.Output.csproj" />
+    <Project Path="src/Easel.Pac/Easel.Pac.csproj" />
+    <Project Path="src/Easel.Rules/Easel.Rules.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Easel.Tests/Easel.Tests.csproj" />
+  </Folder>
+</Solution>

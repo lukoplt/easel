@@ -19,9 +19,9 @@ Thumbs.db
 *.zip
 !**/fixtures/**/*.zip
 
-## pacheck runtime
-.pacheck-baseline.json
-!tests/**/.pacheck-baseline.json
+## easel runtime
+.easel-baseline.json
+!tests/**/.easel-baseline.json
 
 ## test / coverage
 [Tt]est[Rr]esults/

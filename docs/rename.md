@@ -3,7 +3,7 @@
 Rename a symbol across an app and repack it.
 
 ```bash
-pacheck rename <msapp> --from <old> --to <new> [--output <file.msapp>] [--keep-temp]
+easel rename <msapp> --from <old> --to <new> [--output <file.msapp>] [--keep-temp]
 ```
 
 > **Preview.** After it runs, open the output `.msapp` in Power Apps Studio and verify the
@@ -37,12 +37,12 @@ occurrences changed and reminds you to verify in Studio.
 - **Collision.** If `--to` is already defined, the rename is refused (exit 2) before
   anything is written.
 - Verified end-to-end (unpack → rename → pack → unpack) against real apps; see the
-  `RenameE2ETests` suite (enable with `PACHECK_TEST_MSAPP`).
+  `RenameE2ETests` suite (enable with `EASEL_TEST_MSAPP`).
 
 ## Example
 
 ```bash
-pacheck rename MyApp.msapp --from gblUsr --to gblCurrentUser
+easel rename MyApp.msapp --from gblUsr --to gblCurrentUser
 # ✓ Renamed 'gblUsr' → 'gblCurrentUser'. (7 occurrences in 3 files)
 # → MyApp.renamed.msapp
 # preview: open the new .msapp in Power Apps Studio and verify before shipping.

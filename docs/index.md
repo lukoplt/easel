@@ -1,8 +1,8 @@
 ---
-title: pacheck
+title: easel
 ---
 
-# pacheck
+# easel
 
 Static analysis, dependency analysis, metrics, secrets scanning, semantic diff and rename
 for **Power Apps canvas source** (`pa.yaml`). A single CLI that treats your canvas app as
@@ -12,13 +12,13 @@ source code — deterministic, CI-first, read-only by default.
 
 ```bash
 dotnet tool install --global Microsoft.PowerApps.CLI.Tool   # pac (for .msapp)
-dotnet tool install --global PaCheck.Tool                    # pacheck
-pacheck doctor
+dotnet tool install --global Easel.Tool                    # easel
+easel doctor
 ```
 
 ## Docs
 
-- [Quickstart & commands](https://github.com/pacheck/pacheck#commands)
+- [Quickstart & commands](https://github.com/easel/easel#commands)
 - [Rule reference](rules.md)
 - [Configuration](configuration.md)
 - [CI integration](ci.md)
@@ -31,7 +31,7 @@ pacheck doctor
 ## At a glance
 
 ```
-$ pacheck lint ./MyApp
+$ easel lint ./MyApp
 Src/scrHome.pa.yaml
   23:9    warning PA1009 Interactive control 'btnSubmit' (Button) has no AccessibleLabel.
   27:23   info    PA1010 'If' nested 3 deep (threshold 2).

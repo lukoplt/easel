@@ -1,6 +1,6 @@
 # Telemetry
 
-**Decision: pacheck collects no telemetry. None. There is no opt-in and no opt-out to
+**Decision: easel collects no telemetry. None. There is no opt-in and no opt-out to
 configure, because nothing is ever sent.**
 
 ## What this means
@@ -13,7 +13,7 @@ configure, because nothing is ever sent.**
 
 ## Why
 
-pacheck runs over source that often contains business logic and, occasionally, secrets it
+easel runs over source that often contains business logic and, occasionally, secrets it
 is trying to help you find. Sending anything by default would be at odds with that purpose.
 Being a deterministic, offline-by-default tool is a feature.
 

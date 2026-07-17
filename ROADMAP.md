@@ -1,6 +1,6 @@
 # Roadmap
 
-Status against the [architecture plan](pacheck-architektura-a-tasky.md). Versions are
+Status against the [architecture plan](easel-architektura-a-tasky.md). Versions are
 milestones, not dates.
 
 ## Shipped (implemented in this repo)
@@ -35,4 +35,4 @@ milestones, not dates.
 
 - Telemetry (see [docs/telemetry.md](docs/telemetry.md)).
 - Re-implementing `pac` unpack/pack.
-- Replacing in-tenant review tools (Power CAT) — pacheck targets the dev loop.
+- Replacing in-tenant review tools (Power CAT) — easel targets the dev loop.

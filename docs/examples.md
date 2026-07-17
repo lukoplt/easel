@@ -4,12 +4,12 @@ title: Example output
 
 # Example output
 
-Real output from pacheck run against the bundled fixtures.
+Real output from easel run against the bundled fixtures.
 
 ## lint (console)
 
 ```text
-$ pacheck lint ./ComponentApp
+$ easel lint ./ComponentApp
 Src/App.pa.yaml
   3:14    warning PA1003 Variable 'gblApiKey' is assigned but never read.
   3:14    warning PA1006 App.OnStart is heavy (7 assignments, 18 nodes).
@@ -30,7 +30,7 @@ Secret values are always **redacted** — `AK…LE (len 20)` — in every format
 ```json
 {
   "schemaVersion": "1.0",
-  "tool": "pacheck",
+  "tool": "easel",
   "version": "0.1.0",
   "summary": { "error": 3, "warning": 8, "info": 4, "total": 15 },
   "findings": [
@@ -48,12 +48,12 @@ Secret values are always **redacted** — `AK…LE (len 20)` — in every format
 ## lint (sarif)
 
 Uploads to GitHub code scanning; findings appear inline on the PR. Each result carries a
-`partialFingerprints["pacheck/v1"]` so scanning can track it across commits.
+`partialFingerprints["easel/v1"]` so scanning can track it across commits.
 
 ## stats
 
 ```text
-$ pacheck stats ./MyApp
+$ easel stats ./MyApp
 ╭────────────────────────┬──────────────────╮
 │ Metric                 │            Value │
 ├────────────────────────┼──────────────────┤
@@ -82,7 +82,7 @@ graph TD
 ## diff (markdown, for a PR comment)
 
 ```markdown
-## pacheck diff
+## easel diff
 **0** added · **1** removed · **1** renamed · **0** moved · **1** property changes
 
 | Change | Element | Name | Detail |

@@ -7,8 +7,8 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Deterministic>true</Deterministic>
-    <Authors>pacheck contributors</Authors>
-    <Product>pacheck</Product>
+    <Authors>easel contributors</Authors>
+    <Product>easel</Product>
 
     <!-- Analyzers (T0.3) -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>

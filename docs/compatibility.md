@@ -1,6 +1,6 @@
 # Compatibility
 
-pacheck depends on three moving targets: the `pac` CLI, the `pa.yaml` schema, and the
+easel depends on three moving targets: the `pac` CLI, the `pa.yaml` schema, and the
 Microsoft.PowerFx parser. This page records what each build targets and how compatibility
 is guarded.
 
@@ -11,7 +11,7 @@ is guarded.
 | .NET | 10 (LTS) | Single self-contained binary + `dotnet tool`. |
 | Microsoft.PowerFx.Core | 1.8.1 | Parse-only; validated by `PowerFxParseSpike`. |
 | pa.yaml schema | v3.0 | Unknown keys are tolerated, not rejected. |
-| pac CLI | ≥ 1.30.0 | `pac canvas unpack/pack` (Preview). Verified by `pacheck doctor`. |
+| pac CLI | ≥ 1.30.0 | `pac canvas unpack/pack` (Preview). Verified by `easel doctor`. |
 
 ## How compatibility is guarded (TX.1 / TX.2)
 
@@ -28,7 +28,7 @@ is guarded.
 ## Known limitations
 
 - `pac canvas unpack/pack` is marked **Preview** and prints a deprecation notice in
-  pac 2.6+. pacheck pins a minimum version and tracks the replacement command; the
+  pac 2.6+. easel pins a minimum version and tracks the replacement command; the
   round-trip used by `rename` is preview accordingly.
 - Legacy pre-YAML apps are detected and reported with an instruction to re-save in Power
   Apps Studio; they are not analysed directly.

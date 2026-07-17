@@ -1,4 +1,4 @@
-<!-- Thanks for contributing to pacheck! -->
+<!-- Thanks for contributing to easel! -->
 
 ## What & why
 
