@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "easel-azure-devops",
   "name": "easel for Azure Pipelines",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "publisher": "easel",
   "public": false,
   "description": "Static analysis for Power Apps canvas source (pa.yaml) in Azure Pipelines.",

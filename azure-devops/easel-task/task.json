@@ -6,7 +6,7 @@
   "helpMarkDown": "See https://github.com/lukoplt/easel",
   "category": "Utility",
   "author": "easel contributors",
-  "version": { "Major": 0, "Minor": 1, "Patch": 0 },
+  "version": { "Major": 0, "Minor": 1, "Patch": 4 },
   "instanceNameFormat": "easel lint $(path)",
   "inputs": [
     {
