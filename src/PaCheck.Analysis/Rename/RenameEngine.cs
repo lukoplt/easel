@@ -1,18 +1,27 @@
 using System.Text.RegularExpressions;
-using PaCheck.Core.Symbols;
+using PaCheck.Core;
 
 namespace PaCheck.Analysis.Rename;
 
-public sealed record RenameResult(bool Success, string Message, int FilesChanged, int Occurrences);
+public sealed record RenameResult(
+    bool Success,
+    string Message,
+    int FilesChanged,
+    int Occurrences,
+    int StringLiteralHits = 0);
 
 /// <summary>
 /// Renames an identifier across an unpacked source folder (preview). Whole-word matching
-/// over pa.yaml text, with a pre-flight collision check against the symbol table.
+/// over pa.yaml / fx.yaml text, with a pre-flight collision check against the symbol table.
 /// Operates in place on the given folder — callers pass a temp copy, never the original input.
+///
+/// Whole-word matching avoids substring hits (varPopup ≠ varPopupVisible). It cannot,
+/// however, tell an identifier apart from the same word inside a string literal, so those
+/// occurrences are counted and reported for the user to verify (rename is preview).
 /// </summary>
 public static class RenameEngine
 {
-    public static RenameResult Rename(string folder, string oldName, string newName, SymbolTable symbols)
+    public static RenameResult Rename(string folder, string oldName, string newName, AppAnalysis analysis)
     {
         if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName))
             return new RenameResult(false, "Both --from and --to are required.", 0, 0);
@@ -21,16 +30,21 @@ public static class RenameEngine
         if (!IsValidIdentifier(newName))
             return new RenameResult(false, $"'{newName}' is not a valid identifier.", 0, 0);
 
-        if (!symbols.IsDefined(oldName))
+        if (!analysis.Symbols.IsDefined(oldName))
             return new RenameResult(false, $"Symbol '{oldName}' is not defined in this app.", 0, 0);
-        if (symbols.IsDefined(newName))
+        if (analysis.Symbols.IsDefined(newName))
             return new RenameResult(false, $"Collision: '{newName}' is already defined. Choose another name.", 0, 0);
 
         var rx = new Regex($@"\b{Regex.Escape(oldName)}\b");
-        int filesChanged = 0, total = 0;
 
-        // pac may keep both the new (*.pa.yaml) and legacy (*.fx.yaml) source formats in an
-        // unpacked app. Rename across both so the repacked app stays consistent.
+        // Count occurrences that live inside string literals (from the parsed model, so it is
+        // accurate) — these will also be text-replaced and warrant a look.
+        int stringHits = analysis.Model.AllProperties()
+            .Where(p => p.Property.HasFormula)
+            .SelectMany(p => analysis.Fx.Facts(p.Property.Formula).Strings)
+            .Count(s => rx.IsMatch(s.Value));
+
+        int filesChanged = 0, total = 0;
         var files = Directory.EnumerateFiles(folder, "*.pa.yaml", SearchOption.AllDirectories)
             .Concat(Directory.EnumerateFiles(folder, "*.fx.yaml", SearchOption.AllDirectories));
 
@@ -44,7 +58,7 @@ public static class RenameEngine
             total += count;
         }
 
-        return new RenameResult(true, $"Renamed '{oldName}' → '{newName}'.", filesChanged, total);
+        return new RenameResult(true, $"Renamed '{oldName}' → '{newName}'.", filesChanged, total, stringHits);
     }
 
     private static bool IsValidIdentifier(string name) =>

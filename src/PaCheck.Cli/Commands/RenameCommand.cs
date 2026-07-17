@@ -42,12 +42,16 @@ public static class RenameCommand
             try
             {
                 var analysis = AppAnalysis.FromFolder(temp);
-                var result = RenameEngine.Rename(temp, from, to, analysis.Symbols);
+                var result = RenameEngine.Rename(temp, from, to, analysis);
                 if (!result.Success)
                 {
                     AnsiConsole.MarkupLine($"[red]{Markup.Escape(result.Message)}[/]");
                     return ExitCode.InputError;
                 }
+                if (result.StringLiteralHits > 0)
+                    AnsiConsole.MarkupLine(
+                        $"[yellow]⚠ '{Markup.Escape(from)}' also appears in {result.StringLiteralHits} string literal(s) " +
+                        "— these were changed too. Review them in Studio.[/]");
 
                 var outPath = output ?? DefaultOutput(input);
                 AnsiConsole.MarkupLine("[grey]Packing via pac…[/]");

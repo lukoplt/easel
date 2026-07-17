@@ -28,3 +28,6 @@ Thumbs.db
 *.trx
 coverage*.json
 coverage*.xml
+
+## local unpacked apps (not committed)
+unpacked/

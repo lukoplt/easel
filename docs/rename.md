@@ -24,9 +24,20 @@ pacheck rename <msapp> --from <old> --to <new> [--output <file.msapp>] [--keep-t
 pac canvas unpack   →   rename identifier in pa.yaml   →   pac canvas pack   →   new .msapp
 ```
 
-Renaming is whole-word across the unpacked `pa.yaml` sources (a temp copy — never the
-input). Best suited to variables, collections and named formulas. After packing, the tool
-prints how many occurrences changed and reminds you to verify in Studio.
+Renaming is whole-word across the unpacked `pa.yaml` **and** legacy `fx.yaml` sources (a
+temp copy — never the input), so the repacked app stays consistent. Best suited to
+variables, collections and named formulas. After packing, the tool prints how many
+occurrences changed and reminds you to verify in Studio.
+
+### Caveats (why it's preview)
+
+- **String literals.** Whole-word matching cannot tell an identifier apart from the same
+  word inside a `"..."` string. If the old name also appears in a literal, the tool warns
+  (`⚠ 'x' also appears in N string literal(s)`) and you should review those in Studio.
+- **Collision.** If `--to` is already defined, the rename is refused (exit 2) before
+  anything is written.
+- Verified end-to-end (unpack → rename → pack → unpack) against real apps; see the
+  `RenameE2ETests` suite (enable with `PACHECK_TEST_MSAPP`).
 
 ## Example
 
