@@ -46,6 +46,11 @@ jobs:
   nuget:
     name: Publish dotnet tool
     runs-on: ubuntu-latest
+    # Trusted Publishing (OIDC) — no API-key secret. Requires a Trusted Publisher
+    # policy on nuget.org and a repo variable NUGET_USER (your nuget.org username).
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -55,11 +60,15 @@ jobs:
       - name: Pack
         run: dotnet pack src/Easel.Cli/Easel.Cli.csproj -c Release -o nupkg
 
+      - name: NuGet login (Trusted Publishing)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+
       - name: Push to NuGet
-        env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: >
           dotnet nuget push "nupkg/*.nupkg"
-          --api-key "$NUGET_API_KEY"
+          --api-key "${{ steps.login.outputs.NUGET_API_KEY }}"
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
