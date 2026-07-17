@@ -104,6 +104,11 @@ A URL of the form `https://user:pass@host`.
 
 ## Errors
 
+### PA0002 — file-load-error · error
+A whole source file failed to parse (malformed YAML). Reported with its location so a
+broken file is never silently dropped from analysis — fix the YAML, or re-open and re-save
+in Power Apps Studio.
+
 ### PF0001 — unparsable-formula · error
 A formula Power Fx could not parse. Fix the syntax, or (for legacy apps) re-open and
 re-save in Power Apps Studio to export the current `pa.yaml` format. easel never crashes
