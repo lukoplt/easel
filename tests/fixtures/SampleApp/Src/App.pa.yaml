@@ -1,0 +1,10 @@
+App:
+  Properties:
+    OnStart: |
+      =Set(gblUser, User().FullName);
+      Set(gblTheme, {Primary: RGBA(0,120,212,1), Bg: RGBA(255,255,255,1)});
+      Set(gblUnused, 42);
+      ClearCollect(colItems, Filter(Products, Active = true));
+      ClearCollect(colOrphan, [1, 2, 3])
+  Formulas:
+    AppTitle: ="Contoso Field Service"

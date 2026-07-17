@@ -1,0 +1,36 @@
+Screens:
+  scrOrders:
+    Properties:
+      Fill: =RGBA(240, 240, 240, 1)
+    Children:
+      - galA:
+          Control: Gallery@2.15.0
+          Properties:
+            Items: =Filter(Orders, CountRows(colTemp) > 0)
+      - btnSync:
+          Control: Classic/Button@2.2.0
+          Properties:
+            AccessibleLabel: ="Sync orders"
+            OnSelect: |
+              =ForAll(colTemp, Patch(Orders, Defaults(Orders), {Name: Value}))
+      - lblDup1:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Concatenate("Order total is ", Text(Sum(colTemp, Value), "[$-en]#,##0.00"), " today")
+      - lblDup2:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Concatenate("Order total is ", Text(Sum(colTemp, Value), "[$-en]#,##0.00"), " today")
+      - lblDup3:
+          Control: Label@2.4.0
+          Properties:
+            Text: =Concatenate("Order total is ", Text(Sum(colTemp, Value), "[$-en]#,##0.00"), " today")
+      - tmrPoll:
+          Control: Timer@2.1.0
+          Properties:
+            OnTimerEnd: |
+              =Patch(Orders, Defaults(Orders), {Ping: Now()})
+      - lblBad:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Set(broken,

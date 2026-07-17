@@ -1,0 +1,7 @@
+App:
+  Properties:
+    OnStart: |
+      =Set(gblUser, User().FullName);
+      Set(gblBg, RGBA(255, 255, 255, 1))
+  Formulas:
+    AppTitle: ="Clean Sample"

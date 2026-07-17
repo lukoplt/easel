@@ -1,0 +1,12 @@
+App:
+  Properties:
+    OnStart: |
+      =Set(gblUser, User().FullName);
+      Set(gblApiKey, "AKIAIOSFODNN7EXAMPLE");
+      Set(gblEndpoint, "https://admin:hunter2@api.contoso.com/v1");
+      Set(gblA, 1);
+      Set(gblB, 2);
+      Set(gblC, 3);
+      Set(gblD, 4)
+  Formulas:
+    AppTitle: ="Orders"

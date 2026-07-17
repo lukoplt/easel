@@ -1,0 +1,31 @@
+﻿# MODEL
+app formulas: AppTitle
+screen scrDetail
+  lblDetail: Label@2.5.1
+screen scrHome
+  btnGo: Classic/Button@2.2.0
+  btnNoLabel: Classic/Button@2.2.0
+  galItems: Gallery@2.15.0
+  lblTitle: Label@2.5.1
+  txtSearch: Classic/TextInput@2.3.1
+
+# SYMBOLS
+GlobalVariable gblTheme reads=1
+GlobalVariable gblUnused reads=0
+GlobalVariable gblUser reads=1
+GlobalVariable varLocal reads=1
+Collection colItems reads=2
+Collection colOrphan reads=0
+NamedFormula AppTitle reads=1
+Control btnGo reads=0
+Control btnNoLabel reads=0
+Control galItems reads=0
+Control lblDetail reads=0
+Control lblTitle reads=0
+Control txtSearch reads=1
+Screen scrDetail reads=1
+Screen scrHome reads=0
+Media logo reads=0
+
+# GRAPH EDGES
+Screen:scrHome --NavigatesTo--> Screen:scrDetail

@@ -1,0 +1,16 @@
+Screens:
+  scrMain:
+    Properties:
+      Fill: =gblBg
+    Children:
+      - lblHi:
+          Control: Label@2.5.1
+          Properties:
+            Text: =gblUser & " — " & AppTitle
+            AccessibleLabel: ="Greeting"
+      - btnRefresh:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="Refresh"
+            AccessibleLabel: ="Refresh greeting"
+            OnSelect: =Set(gblUser, User().FullName)

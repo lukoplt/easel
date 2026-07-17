@@ -1,0 +1,39 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.cs]
+indent_size = 4
+# Language conventions
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = when_multiline:suggestion
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+dotnet_sort_system_directives_first = true
+# Nullable / analyzers
+dotnet_diagnostic.CA2007.severity = none
+# Micro-perf / cross-language style guidelines — informational, tuned off to keep the build clean.
+dotnet_diagnostic.CA1707.severity = none   # underscores in test names are our convention
+dotnet_diagnostic.CA1716.severity = none   # 'Property' type name is fine for a CLI
+dotnet_diagnostic.CA1822.severity = none   # renderers are intentionally instance-based
+dotnet_diagnostic.CA1826.severity = none
+dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1869.severity = none
+dotnet_diagnostic.CA1875.severity = none
+
+[*.{csproj,props,targets}]
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{json,md}]
+indent_size = 2

@@ -1,0 +1,132 @@
+# pacheck
+
+Static analysis, dependency analysis, metrics, secrets scanning, semantic diff and
+rename for **Power Apps canvas source** (`pa.yaml`).
+
+> Working name. A single self-contained CLI (+ `dotnet tool`) that treats your canvas
+> app as source code: lint it, measure it, find dead code, scan for secrets, diff two
+> versions, and rename symbols — all deterministic, CI-first, read-only by default.
+
+```
+$ pacheck lint ./MyApp
+Src/scrHome.pa.yaml
+  23:9    warning PA1009 Interactive control 'btnSubmit' (Button) has no AccessibleLabel.
+  27:23   info    PA1010 'If' nested 3 deep (threshold 2).
+Src/App.pa.yaml
+  3:14    warning PA1003 Variable 'gblUnused' is assigned but never read.
+
+3 findings — 2 warnings, 1 info
+```
+
+## Why
+
+Power CAT and the checker target review inside a tenant. pacheck targets the **dev loop**:
+run it locally and in CI over the `pa.yaml` you already commit, get machine-readable
+output (JSON / SARIF), and gate pull requests.
+
+## Requirements
+
+- **[.NET 10 SDK](https://dotnet.microsoft.com/)** (to run as a `dotnet tool` or build from source).
+- **[pac CLI](https://learn.microsoft.com/power-platform/developer/cli/introduction)** —
+  required only to read `.msapp` files (unpack/pack goes exclusively through `pac`).
+  Already-unpacked `pa.yaml` folders (Git integration) are read directly.
+
+```bash
+dotnet tool install --global Microsoft.PowerApps.CLI.Tool   # pac
+dotnet tool install --global PaCheck.Tool                    # pacheck
+pacheck doctor                                               # verify the environment
+```
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `pacheck lint <path>` | Run rules, report findings (`--format console\|json\|sarif\|html`). |
+| `pacheck stats <path>` | Metrics: controls/screen, media size, complexity. |
+| `pacheck analyze <path>` | `--find <sym>`, `--dead-code`, `--impact <sym>`, `--graph mermaid\|dot`. |
+| `pacheck secrets <path>` | Secret scan + data-source inventory. |
+| `pacheck diff <base> <head>` | Semantic diff (`--format console\|markdown\|json`). |
+| `pacheck rename <msapp> --from X --to Y` | Rename a symbol and repack (**preview**). |
+| `pacheck doctor` | Environment diagnostics. |
+
+`<path>` is an unpacked source folder **or** a `.msapp` file.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | OK |
+| 1 | Findings at or above `--fail-on` threshold |
+| 2 | Input error (bad path, pre-YAML format) |
+| 3 | pac missing or incompatible |
+| 4 | Internal error |
+
+## Configuration
+
+Drop a `.pacheck.yml` at your repo root (searched upward). See
+[`docs/configuration.md`](docs/configuration.md) and the sample [`.pacheck.yml`](.pacheck.yml).
+
+```yaml
+rules:
+  screen-control-limit: { max: 300 }
+  deep-nested-if: { threshold: 2 }
+  naming-convention:
+    patterns: { variable: "^(gbl|var|loc)[A-Z]", collection: "^col[A-Z]" }
+ignore:
+  - "**/Legacy*.pa.yaml"
+```
+
+**Baseline** — adopt pacheck on a legacy app without drowning in findings:
+
+```bash
+pacheck lint ./MyApp --write-baseline   # record today's findings
+pacheck lint ./MyApp                     # subsequent runs report only new ones
+```
+
+## Rules
+
+Full reference: [`docs/rules.md`](docs/rules.md).
+
+| ID | Rule | Category |
+|---|---|---|
+| PA1001 | Non-delegable query over a data source | Performance |
+| PA1002 | N+1 pattern (`ForAll` + data op) | Performance |
+| PA1003 | Unused variable / collection | Maintainability |
+| PA1004 | Unused media asset | Maintainability |
+| PA1005 | Screen control limit | Performance |
+| PA1006 | Heavy `App.OnStart` | Performance |
+| PA1007 | Naming conventions (opt-in) | Naming |
+| PA1008 | Hardcoded colour outside theme | Maintainability |
+| PA1009 | Missing `AccessibleLabel` | Accessibility |
+| PA1010 | Deeply nested `If` | Maintainability |
+| PA1011 | Timer side-effects | Maintainability |
+| PA1012 | Duplicate formula | Maintainability |
+| PA1013 | Inconsistent control version | Maintainability |
+| PA2001 | Hardcoded secret (key/token/connection string) | Security |
+| PA2002 | High-entropy literal | Security |
+| PA2003 | URL with embedded credentials | Security |
+| PF0001 | Unparsable formula | Error |
+
+## CI
+
+Use the bundled GitHub Action to lint on every PR and upload SARIF to code scanning —
+see [`docs/ci.md`](docs/ci.md).
+
+## Build from source
+
+```bash
+dotnet build
+dotnet test
+dotnet run --project src/PaCheck.Cli -- lint tests/fixtures/SampleApp
+```
+
+## Architecture
+
+See [`pacheck-architektura-a-tasky.md`](pacheck-architektura-a-tasky.md) for the full
+design. In short: `pac`/folder → YAML loader → immutable `AppModel` → Power Fx AST
+(cached) → symbol table + dependency graph → commands → renderers. The model, symbols
+and graph are built **once** and shared across commands.
+
+## License
+
+[MIT](LICENSE).

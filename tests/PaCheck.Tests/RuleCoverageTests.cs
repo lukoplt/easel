@@ -1,0 +1,79 @@
+using PaCheck.Core;
+using PaCheck.Core.Config;
+using PaCheck.Core.Model;
+using PaCheck.Rules;
+using Xunit;
+
+namespace PaCheck.Tests;
+
+/// <summary>End-to-end coverage: each rule fires on the fixture designed to trip it.</summary>
+public sealed class RuleCoverageTests
+{
+    private static IReadOnlyList<Finding> Lint(string fixture, string? configYaml = null)
+    {
+        var analysis = AppAnalysis.FromFolder(Path.Combine(TestPaths.FixturesDir, fixture));
+        var cfg = configYaml is null ? PaCheckConfig.Empty : InlineConfig(configYaml);
+        return analysis.LoadFindings().Concat(RuleEngine.CreateDefault().Run(analysis, cfg)).ToList();
+    }
+
+    [Theory]
+    [InlineData("PA1001")] // non-delegable query over Orders
+    [InlineData("PA1002")] // ForAll + Patch
+    [InlineData("PA1003")] // unused gblA..gblD
+    [InlineData("PA1006")] // heavy OnStart
+    [InlineData("PA1008")] // RGBA literal
+    [InlineData("PA1011")] // timer side effect
+    [InlineData("PA1012")] // duplicate Concatenate
+    [InlineData("PA1013")] // Label 2.5.1 vs 2.4.0
+    [InlineData("PA2001")] // AKIA... key
+    [InlineData("PA2003")] // url with creds
+    [InlineData("PF0001")] // =Set(broken,
+    public void ComponentApp_trips_rule(string ruleId)
+    {
+        var ids = Lint("ComponentApp").Select(f => f.RuleId).ToHashSet();
+        Assert.Contains(ruleId, ids);
+    }
+
+    [Fact]
+    public void CleanApp_has_no_findings()
+    {
+        Assert.Empty(Lint("CleanApp"));
+    }
+
+    [Fact]
+    public void PA1005_fires_when_limit_lowered()
+    {
+        var f = Lint("ComponentApp", "rules:\n  screen-control-limit:\n    max: 2\n");
+        Assert.Contains(f, x => x.RuleId == "PA1005");
+    }
+
+    [Fact]
+    public void PA1007_fires_with_strict_pattern()
+    {
+        var f = Lint("SampleApp", "rules:\n  naming-convention:\n    patterns:\n      variable: \"^zzz\"\n");
+        Assert.Contains(f, x => x.RuleId == "PA1007");
+    }
+
+    [Fact]
+    public void Broken_file_surfaces_PA0002()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "pacheck-broken-" + Guid.NewGuid().ToString("n"), "Src");
+        Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "scrX.pa.yaml"), "Screens:\n  scrX:\n    Children:\n      - a: b: c\n");
+            var analysis = AppAnalysis.FromFolder(Directory.GetParent(dir)!.FullName);
+            Assert.NotEmpty(analysis.LoadFindings());
+            Assert.All(analysis.LoadFindings(), f => Assert.Equal("PA0002", f.RuleId));
+        }
+        finally { Directory.Delete(Directory.GetParent(dir)!.FullName, recursive: true); }
+    }
+
+    private static PaCheckConfig InlineConfig(string yaml)
+    {
+        var tmp = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("n") + ".pacheck.yml");
+        File.WriteAllText(tmp, yaml);
+        try { return ConfigLoader.Load(tmp); }
+        finally { File.Delete(tmp); }
+    }
+}

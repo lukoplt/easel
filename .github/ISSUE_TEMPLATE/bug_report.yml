@@ -1,0 +1,37 @@
+name: Bug report
+description: Something pacheck did wrong (crash, wrong finding, bad output).
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: pacheck version
+      description: Output of `pacheck --version`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: command
+    attributes:
+      label: Command
+      options: [lint, stats, analyze, secrets, diff, rename, doctor, explain, fix]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal pa.yaml to reproduce
+      description: The smallest source snippet that triggers it. Redact anything sensitive.
+      render: yaml
+  - type: input
+    id: pac
+    attributes:
+      label: pac version (if relevant)
+      placeholder: "2.6.4"

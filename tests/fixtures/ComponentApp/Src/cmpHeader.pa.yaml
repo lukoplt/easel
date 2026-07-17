@@ -1,0 +1,10 @@
+ComponentDefinitions:
+  cmpHeader:
+    Properties:
+      Fill: =RGBA(0, 0, 0, 1)
+    Children:
+      - lblTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="Header"
+            AccessibleLabel: ="Header title"

@@ -1,0 +1,64 @@
+name: 'pacheck'
+description: 'Static analysis for Power Apps canvas source (pa.yaml) — lint, SARIF for code scanning.'
+branding:
+  icon: 'check-circle'
+  color: 'purple'
+
+inputs:
+  path:
+    description: 'App to analyse: an unpacked source folder or a .msapp file.'
+    required: true
+    default: '.'
+  format:
+    description: 'Output format: console | json | sarif | html.'
+    required: false
+    default: 'sarif'
+  fail-on:
+    description: 'Minimum severity that fails the job: info | warning | error.'
+    required: false
+    default: 'warning'
+  output:
+    description: 'Output file for machine formats.'
+    required: false
+    default: 'pacheck.sarif'
+  version:
+    description: 'pacheck version to install (default: latest).'
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Ensure .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Install pac CLI
+      shell: bash
+      run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool || dotnet tool update --global Microsoft.PowerApps.CLI.Tool
+
+    - name: Install pacheck
+      shell: bash
+      env:
+        PACHECK_VERSION: ${{ inputs.version }}
+      run: |
+        if [ -n "$PACHECK_VERSION" ]; then
+          dotnet tool install --global PaCheck.Tool --version "$PACHECK_VERSION" || dotnet tool update --global PaCheck.Tool --version "$PACHECK_VERSION"
+        else
+          dotnet tool install --global PaCheck.Tool || dotnet tool update --global PaCheck.Tool
+        fi
+        echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+    - name: Run pacheck
+      shell: bash
+      env:
+        PACHECK_PATH: ${{ inputs.path }}
+        PACHECK_FORMAT: ${{ inputs.format }}
+        PACHECK_FAIL_ON: ${{ inputs.fail-on }}
+        PACHECK_OUTPUT: ${{ inputs.output }}
+      run: |
+        pacheck lint "$PACHECK_PATH" \
+          --format "$PACHECK_FORMAT" \
+          --fail-on "$PACHECK_FAIL_ON" \
+          --output "$PACHECK_OUTPUT"

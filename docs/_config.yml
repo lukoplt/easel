@@ -1,0 +1,9 @@
+title: pacheck
+description: Static analysis for Power Apps canvas source (pa.yaml).
+theme: jekyll-theme-cayman
+show_downloads: false
+markdown: kramdown
+
+# Files that are not part of the site.
+exclude:
+  - _config.yml

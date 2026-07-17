@@ -1,0 +1,34 @@
+name: pac-compat
+
+# TX.1 — track the Power Platform CLI: run the suite and `doctor` against the latest pac
+# so a breaking pac change (args/output) surfaces early, not in users' pipelines.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  latest-pac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install latest pac
+        run: dotnet tool install --global Microsoft.PowerApps.CLI.Tool
+
+      - name: Add tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Test
+        run: dotnet test -c Release --no-build
+
+      - name: doctor (reports detected pac version vs min supported)
+        run: dotnet run -c Release --project src/PaCheck.Cli -- doctor

@@ -1,0 +1,42 @@
+name: Rule proposal
+description: Propose a new lint rule.
+labels: [rule]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Proposed rule name
+      placeholder: "unused-component"
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options: [Performance, Naming, Maintainability, Accessibility, Security]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What should it flag?
+      description: The pattern to detect and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Example that should trip it
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: falsepos
+    attributes:
+      label: False-positive risks
+      description: When might this fire wrongly? How should it be suppressed/configured?
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Suggested default severity
+      options: [info, warning, error]

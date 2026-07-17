@@ -1,0 +1,22 @@
+{
+  "manifestVersion": 1,
+  "id": "pacheck-azure-devops",
+  "name": "pacheck for Azure Pipelines",
+  "version": "0.1.0",
+  "publisher": "pacheck",
+  "public": false,
+  "description": "Static analysis for Power Apps canvas source (pa.yaml) in Azure Pipelines.",
+  "categories": ["Azure Pipelines"],
+  "tags": ["powerapps", "canvas", "powerfx", "linter", "static-analysis"],
+  "targets": [{ "id": "Microsoft.VisualStudio.Services" }],
+  "icons": { "default": "icon.png" },
+  "files": [{ "path": "pacheck-task" }],
+  "contributions": [
+    {
+      "id": "pacheck-lint-task",
+      "type": "ms.vss-distributed-task.task",
+      "targets": ["ms.vss-distributed-task.tasks"],
+      "properties": { "name": "pacheck-task" }
+    }
+  ]
+}

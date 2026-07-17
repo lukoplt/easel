@@ -1,0 +1,25 @@
+## .NET
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.vs/
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## OS
+.DS_Store
+Thumbs.db
+
+## pacheck runtime
+.pacheck-baseline.json
+!tests/**/.pacheck-baseline.json
+
+## test / coverage
+[Tt]est[Rr]esults/
+*.trx
+coverage*.json
+coverage*.xml

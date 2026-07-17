@@ -1,0 +1,31 @@
+Screens:
+  scrHome:
+    Properties:
+      Fill: =gblTheme.Bg
+      OnVisible: =Set(varLocal, 1)
+    Children:
+      - lblTitle:
+          Control: Label@2.5.1
+          Properties:
+            Text: =AppTitle
+            Color: =RGBA(16, 16, 16, 1)
+            AccessibleLabel: ="Title"
+      - galItems:
+          Control: Gallery@2.15.0
+          Properties:
+            Items: =Filter(colItems, StartsWith(Title, txtSearch.Text))
+      - btnGo:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="Open"
+            AccessibleLabel: ="Open detail screen"
+            OnSelect: =Navigate(scrDetail, ScreenTransition.Cover)
+      - btnNoLabel:
+          Control: Classic/Button@2.2.0
+          Properties:
+            Text: ="Submit"
+            OnSelect: =If(varLocal = 1, If(gblUser <> "", If(CountRows(colItems) > 0, Notify("ok"), Notify("empty")), Notify("no user")), Notify("nope"))
+      - txtSearch:
+          Control: Classic/TextInput@2.3.1
+          Properties:
+            Default: =""

@@ -1,0 +1,10 @@
+Screens:
+  scrDetail:
+    Properties:
+      Fill: =RGBA(245, 245, 245, 1)
+    Children:
+      - lblDetail:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="Detail"
+            AccessibleLabel: ="Detail heading"
