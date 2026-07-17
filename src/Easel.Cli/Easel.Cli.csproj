@@ -26,7 +26,7 @@
     <!-- dotnet tool packaging -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>easel</ToolCommandName>
-    <PackageId>Easel.Tool</PackageId>
+    <PackageId>EaselCli</PackageId>
     <Description>Static analysis, dependency analysis, metrics, secrets scan, diff and rename for Power Apps canvas source (pa.yaml).</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/easel/easel</PackageProjectUrl>

@@ -41,7 +41,7 @@ findings reach `fail-on`. Findings appear inline on the PR via code scanning.
 
 ```bash
 dotnet tool install --global Microsoft.PowerApps.CLI.Tool
-dotnet tool install --global Easel.Tool
+dotnet tool install --global EaselCli
 export PATH="$PATH:$HOME/.dotnet/tools"
 
 easel lint ./src/MyApp --format sarif -o easel.sarif --fail-on warning
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet tool install --global Easel.Tool
+      - run: dotnet tool install --global EaselCli
       - run: echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Generate diff

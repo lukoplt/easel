@@ -12,7 +12,7 @@ source code — deterministic, CI-first, read-only by default.
 
 ```bash
 dotnet tool install --global Microsoft.PowerApps.CLI.Tool   # pac (for .msapp)
-dotnet tool install --global Easel.Tool                    # easel
+dotnet tool install --global EaselCli                    # easel
 easel doctor
 ```
 

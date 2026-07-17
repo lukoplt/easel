@@ -15,9 +15,9 @@ Write-Host "Installing pac + easel..."
 dotnet tool install --global Microsoft.PowerApps.CLI.Tool 2>$null; if ($LASTEXITCODE -ne 0) { dotnet tool update --global Microsoft.PowerApps.CLI.Tool }
 
 if ([string]::IsNullOrWhiteSpace($version)) {
-  dotnet tool install --global Easel.Tool 2>$null; if ($LASTEXITCODE -ne 0) { dotnet tool update --global Easel.Tool }
+  dotnet tool install --global EaselCli 2>$null; if ($LASTEXITCODE -ne 0) { dotnet tool update --global EaselCli }
 } else {
-  dotnet tool install --global Easel.Tool --version $version 2>$null; if ($LASTEXITCODE -ne 0) { dotnet tool update --global Easel.Tool --version $version }
+  dotnet tool install --global EaselCli --version $version 2>$null; if ($LASTEXITCODE -ne 0) { dotnet tool update --global EaselCli --version $version }
 }
 
 Write-Host "Running easel lint..."

@@ -1,7 +1,7 @@
 # easel
 
 [![CI](https://github.com/lukoplt/easel/actions/workflows/ci.yml/badge.svg)](https://github.com/lukoplt/easel/actions/workflows/ci.yml)
-[![NuGet](https://img.shields.io/nuget/v/Easel.Tool.svg)](https://www.nuget.org/packages/Easel.Tool)
+[![NuGet](https://img.shields.io/nuget/v/EaselCli.svg)](https://www.nuget.org/packages/EaselCli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Static analysis, dependency analysis, metrics, secrets scanning, semantic diff and
@@ -36,7 +36,7 @@ output (JSON / SARIF), and gate pull requests.
 
 ```bash
 dotnet tool install --global Microsoft.PowerApps.CLI.Tool   # pac (only needed for .msapp)
-dotnet tool install --global Easel.Tool                     # easel
+dotnet tool install --global EaselCli                     # easel
 easel doctor                                                # verify the environment
 ```
 

@@ -44,9 +44,9 @@ runs:
         EASEL_VERSION: ${{ inputs.version }}
       run: |
         if [ -n "$EASEL_VERSION" ]; then
-          dotnet tool install --global Easel.Tool --version "$EASEL_VERSION" || dotnet tool update --global Easel.Tool --version "$EASEL_VERSION"
+          dotnet tool install --global EaselCli --version "$EASEL_VERSION" || dotnet tool update --global EaselCli --version "$EASEL_VERSION"
         else
-          dotnet tool install --global Easel.Tool || dotnet tool update --global Easel.Tool
+          dotnet tool install --global EaselCli || dotnet tool update --global EaselCli
         fi
         echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
