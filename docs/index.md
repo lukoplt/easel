@@ -18,6 +18,7 @@ easel doctor
 
 ## Docs
 
+- [**Usage guide** — every command with examples](usage.md)
 - [Quickstart & commands](https://github.com/lukoplt/easel#commands)
 - [Rule reference](rules.md)
 - [Configuration](configuration.md)

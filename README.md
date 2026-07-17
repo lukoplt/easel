@@ -63,7 +63,8 @@ through `pac`. Already-unpacked `pa.yaml` folders (Git integration) are read dir
 | `easel doctor` | Environment diagnostics. |
 
 `<path>` is an unpacked source folder, a `.msapp` file, or a solution `.zip` (with a
-single canvas app). See [docs/](docs/): [rules](docs/rules.md) ·
+single canvas app). **Full [usage guide with examples](docs/usage.md).**
+See also [docs/](docs/): [rules](docs/rules.md) ·
 [configuration](docs/configuration.md) · [CI](docs/ci.md) · [diff](docs/diff.md) ·
 [rename](docs/rename.md) · [AI](docs/ai.md) · [compatibility](docs/compatibility.md).
 
