@@ -7,7 +7,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Deterministic>true</Deterministic>
-    <Authors>easel contributors</Authors>
+    <Authors>Lukáš Oplt</Authors>
     <Product>easel</Product>
 
     <!-- Analyzers (T0.3) -->

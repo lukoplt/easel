@@ -165,3 +165,7 @@ New rules and real-world fixtures are the most valuable contributions — see
 ## License
 
 [MIT](LICENSE).
+
+---
+
+Made with ❤ by Lukáš Oplt
