@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run easel
-        uses: easel/easel/action@v0     # or a pinned SHA
+        uses: lukoplt/easel/action@v0     # or a pinned SHA
         with:
           path: ./src/MyApp          # unpacked pa.yaml folder or a .msapp
           format: sarif

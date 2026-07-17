@@ -2,17 +2,17 @@
 # Install: brew install easel/tap/easel  (after tapping the release repo)
 class Pacheck < Formula
   desc "Static analysis for Power Apps canvas source (pa.yaml)"
-  homepage "https://github.com/easel/easel"
+  homepage "https://github.com/lukoplt/easel"
   version "0.1.0"
   license "MIT"
 
   on_macos do
-    url "https://github.com/easel/easel/releases/download/v0.1.0/easel-osx-arm64.tar.gz"
+    url "https://github.com/lukoplt/easel/releases/download/v0.1.0/easel-osx-arm64.tar.gz"
     sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   end
 
   on_linux do
-    url "https://github.com/easel/easel/releases/download/v0.1.0/easel-linux-x64.tar.gz"
+    url "https://github.com/lukoplt/easel/releases/download/v0.1.0/easel-linux-x64.tar.gz"
     sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   end
 

@@ -18,7 +18,7 @@ easel doctor
 
 ## Docs
 
-- [Quickstart & commands](https://github.com/easel/easel#commands)
+- [Quickstart & commands](https://github.com/lukoplt/easel#commands)
 - [Rule reference](rules.md)
 - [Configuration](configuration.md)
 - [CI integration](ci.md)

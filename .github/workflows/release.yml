@@ -4,14 +4,12 @@ on:
   push:
     tags: ['v*']
 
-permissions:
-  contents: write
-
 jobs:
   binaries:
-    name: Publish ${{ matrix.rid }}
+    name: Build ${{ matrix.rid }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false   # one platform's failure must not cancel the others
       matrix:
         rid: [win-x64, osx-arm64, linux-x64]
     steps:
@@ -31,17 +29,39 @@ jobs:
         run: |
           cd out/${{ matrix.rid }}
           if [ "${{ matrix.rid }}" = "win-x64" ]; then
-            zip -r "../../easel-${{ matrix.rid }}.zip" easel.exe
+            zip -r "$GITHUB_WORKSPACE/easel-${{ matrix.rid }}.zip" easel.exe
           else
-            tar -czf "../../easel-${{ matrix.rid }}.tar.gz" easel
+            tar -czf "$GITHUB_WORKSPACE/easel-${{ matrix.rid }}.tar.gz" easel
           fi
 
-      - name: Upload release asset
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: dist-${{ matrix.rid }}
+          path: |
             easel-${{ matrix.rid }}.zip
             easel-${{ matrix.rid }}.tar.gz
+          if-no-files-found: ignore
+          retention-days: 1
+
+  release:
+    name: Create release
+    needs: binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # Single upload from one job — no concurrent writes to the same release.
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: dist/*
 
   nuget:
     name: Publish dotnet tool

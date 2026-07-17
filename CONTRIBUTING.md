@@ -6,7 +6,7 @@ fixtures**.
 ## Getting started
 
 ```bash
-git clone https://github.com/easel/easel
+git clone https://github.com/lukoplt/easel
 cd easel
 dotnet build
 dotnet test

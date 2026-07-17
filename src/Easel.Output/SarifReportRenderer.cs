@@ -6,7 +6,7 @@ namespace Easel.Output;
 /// <summary>SARIF 2.1.0 output for GitHub code scanning / Azure DevOps.</summary>
 public sealed class SarifReportRenderer
 {
-    private const string InformationUri = "https://github.com/easel/easel";
+    private const string InformationUri = "https://github.com/lukoplt/easel";
 
     public string Render(LintReport report)
     {

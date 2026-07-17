@@ -29,7 +29,7 @@
     <PackageId>EaselCli</PackageId>
     <Description>Static analysis, dependency analysis, metrics, secrets scan, diff and rename for Power Apps canvas source (pa.yaml).</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/easel/easel</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/lukoplt/easel</PackageProjectUrl>
     <PackageTags>powerapps;canvas;powerfx;linter;static-analysis;cli</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

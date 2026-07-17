@@ -2,11 +2,11 @@ PackageIdentifier: Easel.Tool
 PackageVersion: 0.1.0
 PackageLocale: en-US
 Publisher: easel contributors
-PublisherUrl: https://github.com/easel/easel
+PublisherUrl: https://github.com/lukoplt/easel
 PackageName: easel
-PackageUrl: https://github.com/easel/easel
+PackageUrl: https://github.com/lukoplt/easel
 License: MIT
-LicenseUrl: https://github.com/easel/easel/blob/main/LICENSE
+LicenseUrl: https://github.com/lukoplt/easel/blob/main/LICENSE
 ShortDescription: Static analysis for Power Apps canvas source (pa.yaml).
 Description: >-
   Lint, metrics, dependency analysis, secrets scanning, semantic diff and rename for Power
