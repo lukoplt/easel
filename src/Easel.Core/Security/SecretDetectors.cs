@@ -45,23 +45,23 @@ public static partial class SecretDetectors
         var results = new List<SecretMatch>();
         if (string.IsNullOrWhiteSpace(value)) return results;
 
-        bool Allowed(string raw) => opts.Allowlist.Any(a =>
-            raw.Contains(a, StringComparison.OrdinalIgnoreCase) ||
-            a.Contains(raw, StringComparison.OrdinalIgnoreCase));
+        bool Allowed(string raw) => opts.Allowlist
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Any(a => raw.Contains(a, StringComparison.OrdinalIgnoreCase));
 
         void Add(SecretKind kind, string desc, string raw)
         {
             if (!Allowed(raw)) results.Add(new SecretMatch(kind, desc, Redact(raw)));
         }
 
-        var url = UrlCredentialsRx().Match(value);
-        if (url.Success) Add(SecretKind.UrlCredentials, "URL contains embedded credentials", url.Value);
-        var cs = ConnectionStringRx().Match(value);
-        if (cs.Success) Add(SecretKind.ConnectionString, "Looks like a connection string with a secret", cs.Value);
-        var ak = ApiKeyRx().Match(value);
-        if (ak.Success) Add(SecretKind.ApiKey, "Looks like an API key", ak.Value);
-        var tk = TokenRx().Match(value);
-        if (tk.Success) Add(SecretKind.Token, "Looks like an access token", tk.Value);
+        foreach (Match match in UrlCredentialsRx().Matches(value))
+            Add(SecretKind.UrlCredentials, "URL contains embedded credentials", match.Value);
+        foreach (Match match in ConnectionStringRx().Matches(value))
+            Add(SecretKind.ConnectionString, "Looks like a connection string with a secret", match.Value);
+        foreach (Match match in ApiKeyRx().Matches(value))
+            Add(SecretKind.ApiKey, "Looks like an API key", match.Value);
+        foreach (Match match in TokenRx().Matches(value))
+            Add(SecretKind.Token, "Looks like an access token", match.Value);
 
         if (includeEntropy)
         {
@@ -80,7 +80,11 @@ public static partial class SecretDetectors
     /// values are still caught — without the entropy heuristic firing on expressions. Deduped.
     /// </summary>
     public static IReadOnlyList<SecretMatch> ScanProperty(
-        string rawValue, IEnumerable<string> stringLiterals, SecretScanOptions? options = null)
+        string rawValue,
+        IEnumerable<string> stringLiterals,
+        bool isFormula,
+        bool parseSucceeded,
+        SecretScanOptions? options = null)
     {
         var opts = options ?? SecretScanOptions.Default;
         var seen = new HashSet<(SecretKind, string)>();
@@ -93,11 +97,53 @@ public static partial class SecretDetectors
                     results.Add(m);
         }
 
+        if (!isFormula)
+        {
+            Take(Scan(rawValue, opts, includeEntropy: true));
+            return results;
+        }
+
+        // Valid formulas are trusted structurally: only their actual string literals are data.
+        // Scanning the whole expression would mistake identifiers such as api_key for secrets.
         foreach (var literal in stringLiterals)
             Take(Scan(literal, opts, includeEntropy: true));
-        Take(Scan(rawValue, opts, includeEntropy: false));
+
+        if (!parseSucceeded)
+        {
+            // A broken formula has no reliable AST. Recover quoted strings lexically so generic
+            // entropy detection still works, then use pattern-only raw fallback for unquoted
+            // high-confidence formats such as AKIA... and JWTs.
+            foreach (var literal in ExtractQuotedStrings(rawValue))
+                Take(Scan(literal, opts, includeEntropy: true));
+            Take(Scan(rawValue, opts, includeEntropy: false));
+        }
 
         return results;
+    }
+
+    private static IEnumerable<string> ExtractQuotedStrings(string expression)
+    {
+        for (var i = 0; i < expression.Length; i++)
+        {
+            if (expression[i] != '"') continue;
+            var value = new System.Text.StringBuilder();
+            i++;
+            while (i < expression.Length)
+            {
+                if (expression[i] == '"')
+                {
+                    if (i + 1 < expression.Length && expression[i + 1] == '"')
+                    {
+                        value.Append('"');
+                        i += 2;
+                        continue;
+                    }
+                    break;
+                }
+                value.Append(expression[i++]);
+            }
+            if (value.Length > 0) yield return value.ToString();
+        }
     }
 
     public static double ShannonEntropy(string s)

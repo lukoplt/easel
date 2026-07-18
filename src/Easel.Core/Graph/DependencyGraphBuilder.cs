@@ -12,14 +12,11 @@ public static class DependencyGraphBuilder
         var nodes = new List<GraphNode>();
         var edges = new List<GraphEdge>();
 
-        // Context variables are screen-scoped: two screens may each have their own 'locX',
-        // so their node identity includes the scope. Everything else is app-wide (canvas
-        // enforces unique control names).
-        static string NodeId(SymbolKind kind, string name, string? scope) =>
-            kind == SymbolKind.ContextVariable ? $"ContextVariable:{scope}:{name}" : $"{kind}:{name}";
-
         foreach (var d in symbols.Definitions)
-            nodes.Add(new GraphNode(NodeId(d.Kind, d.Name, d.Scope), d.Kind.ToString(), d.Name));
+            nodes.Add(new GraphNode(SymbolNodeId(d), d.Kind.ToString(), d.Name));
+
+        foreach (var component in model.Components)
+            nodes.Add(new GraphNode($"Component:{component.Name}", "Component", component.Name));
 
         nodes.Add(new GraphNode("App", "App", "App"));
 
@@ -33,11 +30,15 @@ public static class DependencyGraphBuilder
             // A context variable resolves only within its own screen scope.
             var sameScope = defs.FirstOrDefault(d => d.Kind == SymbolKind.ContextVariable
                 && string.Equals(d.Scope, scope, StringComparison.OrdinalIgnoreCase));
-            if (sameScope is not null) return NodeId(sameScope.Kind, sameScope.Name, sameScope.Scope);
+            if (sameScope is not null) return SymbolNodeId(sameScope);
 
-            // Otherwise an app-wide symbol; do NOT fall back to a context var in a different screen.
-            var appWide = defs.FirstOrDefault(d => d.Kind != SymbolKind.ContextVariable);
-            return appWide is null ? null : NodeId(appWide.Kind, appWide.Name, appWide.Scope);
+            var scopedControl = defs.FirstOrDefault(d => d.Kind == SymbolKind.Control
+                && string.Equals(d.Scope, scope, StringComparison.OrdinalIgnoreCase));
+            if (scopedControl is not null) return SymbolNodeId(scopedControl);
+
+            // Do not bind a reference to a context variable/control from a different scope.
+            var appWide = defs.FirstOrDefault(d => d.Kind is not SymbolKind.ContextVariable and not SymbolKind.Control);
+            return appWide is null ? null : SymbolNodeId(appWide);
         }
 
         foreach (var pr in model.AllProperties())
@@ -72,9 +73,19 @@ public static class DependencyGraphBuilder
     private static string OwnerId(PropertyRef pr) => pr.OwnerKind switch
     {
         OwnerKind.Screen => $"{SymbolKind.Screen}:{pr.OwnerName}",
-        OwnerKind.Control => $"{SymbolKind.Control}:{pr.OwnerName}",
+        OwnerKind.Control => ScopedId(SymbolKind.Control, pr.OwnerName, pr.ScreenName),
+        OwnerKind.Component => $"Component:{pr.OwnerName}",
+        OwnerKind.NamedFormula => $"{SymbolKind.NamedFormula}:{pr.Property.Name}",
         _ => "App",
     };
+
+    public static string SymbolNodeId(SymbolDefinition definition) =>
+        ScopedId(definition.Kind, definition.Name, definition.Scope);
+
+    private static string ScopedId(SymbolKind kind, string name, string? scope) =>
+        kind is SymbolKind.ContextVariable or SymbolKind.Control && !string.IsNullOrEmpty(scope)
+            ? $"{kind}:{scope}:{name}"
+            : $"{kind}:{name}";
 
     private static string ScreenIdFor(PropertyRef pr) =>
         pr.ScreenName is { Length: > 0 } s ? $"{SymbolKind.Screen}:{s}"

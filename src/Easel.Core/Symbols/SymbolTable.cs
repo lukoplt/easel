@@ -25,6 +25,7 @@ public sealed record SymbolDefinition(
 /// <summary>A read occurrence of a bare identifier.</summary>
 public sealed record SymbolReference(
     string Name,
+    string? Scope,
     SourceLocation Location,
     string InPath);
 
@@ -58,6 +59,15 @@ public sealed class SymbolTable
         _refsByName.TryGetValue(name, out var r) ? r : Array.Empty<SymbolReference>();
 
     public int ReadCount(string name) => Usages(name).Count;
+
+    public IReadOnlyList<SymbolReference> Usages(SymbolDefinition definition) =>
+        definition.Kind == SymbolKind.ContextVariable
+            ? Usages(definition.Name)
+                .Where(r => string.Equals(r.Scope, definition.Scope, StringComparison.OrdinalIgnoreCase))
+                .ToList()
+            : Usages(definition.Name);
+
+    public int ReadCount(SymbolDefinition definition) => Usages(definition).Count;
 
     public IEnumerable<SymbolDefinition> OfKind(SymbolKind kind) =>
         Definitions.Where(d => d.Kind == kind);

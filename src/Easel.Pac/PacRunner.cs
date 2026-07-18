@@ -32,7 +32,7 @@ public sealed partial class PacRunner
     private static partial Regex VersionRegex();
 
     /// <summary>Detect pac and its version without throwing.</summary>
-    public static PacInfo Detect()
+    public static PacInfo Detect(CancellationToken cancellationToken = default)
     {
         var path = FindExecutable();
         if (path is null) return new PacInfo(false, null, null, false);
@@ -40,10 +40,12 @@ public sealed partial class PacRunner
         string? version = null;
         try
         {
-            var res = ProcessRunner.Run(path, new[] { "help" }, timeoutMs: 30_000);
+            var res = ProcessRunner.Run(path, new[] { "help" }, timeoutMs: 30_000,
+                cancellationToken: cancellationToken);
             var m = VersionRegex().Match(res.Combined);
             if (m.Success) version = m.Groups[1].Value;
         }
+        catch (OperationCanceledException) { throw; }
         catch { /* detection is best-effort */ }
 
         var supported = version is not null
@@ -53,9 +55,9 @@ public sealed partial class PacRunner
     }
 
     /// <summary>Create a runner or throw a <see cref="PacException"/> with install guidance.</summary>
-    public static PacRunner Create()
+    public static PacRunner Create(CancellationToken cancellationToken = default)
     {
-        var info = Detect();
+        var info = Detect(cancellationToken);
         if (!info.Found || info.Path is null)
             throw new PacException(InstallInstruction);
         if (!info.VersionSupported)

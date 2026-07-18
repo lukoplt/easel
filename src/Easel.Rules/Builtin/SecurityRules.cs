@@ -34,8 +34,12 @@ public abstract class SecretRuleBase : RuleBase
         {
             var value = pr.Property.Formula;
             if (string.IsNullOrEmpty(value)) continue;
-            var literals = ctx.Fx.Facts(value).Strings.Select(s => s.Value);
-            foreach (var match in SecretDetectors.ScanProperty(value, literals, opts))
+            var parse = pr.Property.IsFormula ? ctx.Fx.Parse(value) : null;
+            var literals = parse is { IsSuccess: true }
+                ? ctx.Fx.Facts(value).Strings.Select(s => s.Value)
+                : Array.Empty<string>();
+            foreach (var match in SecretDetectors.ScanProperty(value, literals,
+                         pr.Property.IsFormula, parse?.IsSuccess ?? false, opts))
                 yield return (pr, match);
         }
     }

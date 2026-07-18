@@ -57,7 +57,7 @@ jobs:
           retention-days: 1
 
   release:
-    name: Create release
+    name: Create draft release
     needs: binaries
     runs-on: ubuntu-latest
     permissions:
@@ -74,11 +74,12 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: dist/*
+          draft: true
 
   nuget:
     name: Publish dotnet tool
-    # After the GitHub release: publishing NuGet only once the release exists narrows the
-    # partial-release window (a fully atomic cross-service publish is not achievable).
+    # Publish only after the draft and its binary assets exist. The release remains invisible
+    # until NuGet succeeds, preventing a public partial release.
     needs: [test, release]
     runs-on: ubuntu-latest
     # Trusted Publishing (OIDC) — no API-key secret. Requires a Trusted Publisher
@@ -109,3 +110,15 @@ jobs:
           --api-key "$NUGET_API_KEY"
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
+
+  finalize:
+    name: Publish release
+    needs: nuget
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Make GitHub release public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false

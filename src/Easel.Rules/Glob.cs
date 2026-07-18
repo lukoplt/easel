@@ -36,8 +36,18 @@ public static class Glob
                     else sb.Append("[^/]*");
                     break;
                 case '?': sb.Append("[^/]"); break;
-                case '.': case '(': case ')': case '+': case '|':
-                case '^': case '$': case '{': case '}': case '[': case ']': case '\\':
+                case '.':
+                case '(':
+                case ')':
+                case '+':
+                case '|':
+                case '^':
+                case '$':
+                case '{':
+                case '}':
+                case '[':
+                case ']':
+                case '\\':
                     sb.Append('\\').Append(c); break;
                 default: sb.Append(c); break;
             }

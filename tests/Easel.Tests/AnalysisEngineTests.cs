@@ -1,10 +1,10 @@
 using Easel.Analysis.Analyze;
 using Easel.Analysis.Diff;
 using Easel.Analysis.Stats;
-using AppDiffEngine = Easel.Analysis.Diff.DiffEngine;
 using Easel.Core;
 using Easel.Core.Loader;
 using Xunit;
+using AppDiffEngine = Easel.Analysis.Diff.DiffEngine;
 
 namespace Easel.Tests;
 

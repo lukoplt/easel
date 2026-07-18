@@ -60,7 +60,7 @@ public static class SymbolTableBuilder
             {
                 // Skip the identifier token that is a write target (definition, not a read).
                 if (writeTargets.Contains((n.Name, n.SpanStart))) continue;
-                refs.Add(new SymbolReference(n.Name, loc, pr.Path));
+                refs.Add(new SymbolReference(n.Name, scope, loc, pr.Path));
             }
         }
 
