@@ -76,26 +76,72 @@ public static class DiffEngine
                 changes.Add(new ElementChange(ChangeKind.Moved, headC.Type, name,
                     $"{baseC.Screen}/{baseC.Parent} → {headC.Screen}/{headC.Parent}"));
 
-            foreach (var change in PropertyChanges(baseC.Control, headC.Control, fx))
+            foreach (var change in PropertyChanges(baseC.Control.Properties, headC.Control.Properties, fx))
                 changes.Add(change with { Name = $"{name}.{change.Name}" });
         }
+
+        // --- App properties ---
+        foreach (var change in PropertyChanges(baseModel.App.Properties, headModel.App.Properties, fx))
+            changes.Add(change with { Name = $"App.{change.Name}" });
+
+        // --- Named formulas ---
+        DiffByName(changes, "NamedFormula",
+            baseModel.App.Formulas.ToDictionary(f => f.Name, f => f.Formula, StringComparer.OrdinalIgnoreCase),
+            headModel.App.Formulas.ToDictionary(f => f.Name, f => f.Formula, StringComparer.OrdinalIgnoreCase));
+
+        // --- Components (definitions) ---
+        var baseComps = baseModel.Components.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var headComps = headModel.Components.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var n in headComps.Except(baseComps)) changes.Add(new ElementChange(ChangeKind.Added, "Component", n));
+        foreach (var n in baseComps.Except(headComps)) changes.Add(new ElementChange(ChangeKind.Removed, "Component", n));
+
+        // --- Data sources ---
+        var baseDs = baseModel.DataSources.Select(d => d.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var headDs = headModel.DataSources.Select(d => d.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var n in headDs.Except(baseDs)) changes.Add(new ElementChange(ChangeKind.Added, "DataSource", n));
+        foreach (var n in baseDs.Except(headDs)) changes.Add(new ElementChange(ChangeKind.Removed, "DataSource", n));
+
+        // --- Media ---
+        var baseMedia = baseModel.Media.Select(m => m.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var headMedia = headModel.Media.Select(m => m.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var n in headMedia.Except(baseMedia)) changes.Add(new ElementChange(ChangeKind.Added, "Media", n));
+        foreach (var n in baseMedia.Except(headMedia)) changes.Add(new ElementChange(ChangeKind.Removed, "Media", n));
 
         return new DiffReport(changes);
     }
 
-    private static IEnumerable<ElementChange> PropertyChanges(Control baseC, Control headC, FxParseService fx)
+    private static void DiffByName(List<ElementChange> changes, string kind,
+        IReadOnlyDictionary<string, string> baseMap, IReadOnlyDictionary<string, string> headMap)
     {
-        var baseProps = baseC.Properties.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
-        var headProps = headC.Properties.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, hv) in headMap)
+        {
+            if (!baseMap.TryGetValue(name, out var bv))
+                changes.Add(new ElementChange(ChangeKind.Added, kind, name));
+            else if (Normalize(bv) != Normalize(hv))
+                changes.Add(new ElementChange(ChangeKind.PropertyChanged, kind, name, "changed"));
+        }
+        foreach (var name in baseMap.Keys.Where(k => !headMap.ContainsKey(k)))
+            changes.Add(new ElementChange(ChangeKind.Removed, kind, name));
+    }
+
+    private static IEnumerable<ElementChange> PropertyChanges(
+        IReadOnlyList<Property> baseList, IReadOnlyList<Property> headList, FxParseService fx)
+    {
+        var baseProps = baseList.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+        var headProps = headList.ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
 
         foreach (var (pname, hp) in headProps)
         {
-            if (!baseProps.TryGetValue(pname, out var bp)) continue; // new property: implied by other tooling
+            if (!baseProps.TryGetValue(pname, out var bp))
+            {
+                yield return new ElementChange(ChangeKind.Added, "Property", pname, "property added");
+                continue;
+            }
             if (Normalize(bp.Formula) == Normalize(hp.Formula)) continue;
-
-            var detail = SemanticDelta(bp.Formula, hp.Formula, fx);
-            yield return new ElementChange(ChangeKind.PropertyChanged, "Property", pname, detail);
+            yield return new ElementChange(ChangeKind.PropertyChanged, "Property", pname, SemanticDelta(bp.Formula, hp.Formula, fx));
         }
+        foreach (var pname in baseProps.Keys.Where(k => !headProps.ContainsKey(k)))
+            yield return new ElementChange(ChangeKind.Removed, "Property", pname, "property removed");
     }
 
     /// <summary>Describe what changed at AST level (functions/identifiers added/removed), not text.</summary>
@@ -137,6 +183,9 @@ public static class DiffEngine
         foreach (var s in model.Screens)
             foreach (var c in Walk(s.Children, s.Name, s.Name))
                 yield return c;
+        foreach (var comp in model.Components)
+            foreach (var c in Walk(comp.Children, comp.Name, comp.Name))
+                yield return c;
     }
 
     private static IEnumerable<FlatControl> Walk(IReadOnlyList<Control> controls, string screen, string parent)
@@ -155,5 +204,19 @@ public static class DiffEngine
         return slash >= 0 ? c.ControlType[(slash + 1)..] : c.ControlType;
     }
 
-    private static string Normalize(string f) => string.Concat(f.Where(ch => !char.IsWhiteSpace(ch)));
+    /// <summary>
+    /// Strip whitespace that is not significant — but keep whitespace INSIDE string literals,
+    /// so ="a b" and ="ab" are treated as different. Power Fx escapes a quote by doubling it.
+    /// </summary>
+    private static string Normalize(string f)
+    {
+        var sb = new System.Text.StringBuilder(f.Length);
+        bool inString = false;
+        foreach (var c in f)
+        {
+            if (c == '"') { inString = !inString; sb.Append(c); }
+            else if (inString || !char.IsWhiteSpace(c)) sb.Append(c);
+        }
+        return sb.ToString();
+    }
 }

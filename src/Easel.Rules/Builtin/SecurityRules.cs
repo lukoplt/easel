@@ -13,22 +13,29 @@ public abstract class SecretRuleBase : RuleBase
 
     public override IEnumerable<Finding> Evaluate(RuleContext ctx)
     {
+        foreach (var (pr, match) in ScanAll(ctx))
+            if (match.Kind == Kind)
+                yield return Report(
+                    $"{match.Description}: {match.Redacted}",
+                    pr.Property.Location, pr.Path,
+                    help: "Move secrets to a secure store (Azure Key Vault, environment variables); never hardcode.");
+    }
+
+    /// <summary>
+    /// Scan the RAW value of every property (literals and unparsable formulas included),
+    /// so a secret is never missed because the surrounding formula didn't parse.
+    /// </summary>
+    protected static IEnumerable<(PropertyRef Pr, SecretMatch Match)> ScanAll(RuleContext ctx)
+    {
         var allowlist = ctx.Options.Child("allowlist").AsStringList().ToList();
         var opts = allowlist.Count > 0 ? SecretScanOptions.Default with { Allowlist = allowlist } : SecretScanOptions.Default;
 
-        foreach (var pr in ctx.Formulas())
+        foreach (var pr in ctx.Model.AllProperties())
         {
-            foreach (var lit in ctx.Fx.Facts(pr.Property.Formula).Strings)
-            {
-                foreach (var match in SecretDetectors.Scan(lit.Value, opts))
-                {
-                    if (match.Kind != Kind) continue;
-                    yield return Report(
-                        $"{match.Description}: {match.Redacted}",
-                        pr.Property.Location, pr.Path,
-                        help: "Move secrets to a secure store (Azure Key Vault, environment variables); never hardcode.");
-                }
-            }
+            var value = pr.Property.Formula;
+            if (string.IsNullOrEmpty(value)) continue;
+            foreach (var match in SecretDetectors.Scan(value, opts))
+                yield return (pr, match);
         }
     }
 }
@@ -40,21 +47,17 @@ public sealed class ApiKeyLiteralRule : SecretRuleBase
     public override string Name => "hardcoded-secret";
     protected override SecretKind Kind => SecretKind.ApiKey;
 
+    private static readonly SecretKind[] Covered = { SecretKind.ApiKey, SecretKind.Token, SecretKind.ConnectionString };
+
     public override IEnumerable<Finding> Evaluate(RuleContext ctx)
     {
         // PA2001 covers connection strings, API keys and tokens together.
-        var allowlist = ctx.Options.Child("allowlist").AsStringList().ToList();
-        var opts = allowlist.Count > 0 ? SecretScanOptions.Default with { Allowlist = allowlist } : SecretScanOptions.Default;
-        var kinds = new[] { SecretKind.ApiKey, SecretKind.Token, SecretKind.ConnectionString };
-
-        foreach (var pr in ctx.Formulas())
-            foreach (var lit in ctx.Fx.Facts(pr.Property.Formula).Strings)
-                foreach (var match in SecretDetectors.Scan(lit.Value, opts))
-                    if (kinds.Contains(match.Kind))
-                        yield return Report(
-                            $"{match.Description}: {match.Redacted}",
-                            pr.Property.Location, pr.Path,
-                            help: "Move secrets to a secure store; never hardcode credentials.");
+        foreach (var (pr, match) in ScanAll(ctx))
+            if (Covered.Contains(match.Kind))
+                yield return Report(
+                    $"{match.Description}: {match.Redacted}",
+                    pr.Property.Location, pr.Path,
+                    help: "Move secrets to a secure store; never hardcode credentials.");
     }
 }
 

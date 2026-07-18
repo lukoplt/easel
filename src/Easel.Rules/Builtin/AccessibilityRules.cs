@@ -24,7 +24,7 @@ public sealed class MissingAccessibleLabelRule : RuleBase
             {
                 if (!IsInteractive(c)) continue;
                 var label = c.GetProperty("AccessibleLabel");
-                if (label is { HasFormula: true }) continue;
+                if (label is { HasFormula: true } && !IsEmptyLabel(label.Formula)) continue;
 
                 yield return Report(
                     $"Interactive control '{c.Name}' ({BaseType(c)}) has no AccessibleLabel.",
@@ -36,4 +36,12 @@ public sealed class MissingAccessibleLabelRule : RuleBase
 
     private static bool IsInteractive(Control c) =>
         Interactive.Contains(BaseType(c)) || c.GetProperty("OnSelect") is { HasFormula: true };
+
+    /// <summary>An empty string or Blank() is not a usable accessible label.</summary>
+    private static bool IsEmptyLabel(string formula)
+    {
+        var f = formula.Trim();
+        return f is "" or "\"\"" or "''"
+            || string.Equals(f, "Blank()", StringComparison.OrdinalIgnoreCase);
+    }
 }

@@ -5,8 +5,20 @@ on:
     tags: ['v*']
 
 jobs:
+  # Gate: never publish a release or package that fails the test suite.
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet test -c Release
+
   binaries:
     name: Build ${{ matrix.rid }}
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false   # one platform's failure must not cancel the others
@@ -65,6 +77,7 @@ jobs:
 
   nuget:
     name: Publish dotnet tool
+    needs: test
     runs-on: ubuntu-latest
     # Trusted Publishing (OIDC) — no API-key secret. Requires a Trusted Publisher
     # policy on nuget.org and a repo variable NUGET_USER (your nuget.org username).

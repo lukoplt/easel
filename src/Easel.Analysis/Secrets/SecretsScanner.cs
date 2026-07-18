@@ -20,17 +20,19 @@ public static class SecretsScanner
     {
         var findings = new List<Finding>();
 
-        foreach (var pr in a.Model.AllProperties().Where(p => p.Property.HasFormula))
+        // Scan the RAW property value (works for literals and unparsable formulas too —
+        // a secret must never be missed just because the surrounding formula didn't parse).
+        foreach (var pr in a.Model.AllProperties())
         {
-            foreach (var lit in a.Fx.Facts(pr.Property.Formula).Strings)
+            var value = pr.Property.Formula;
+            if (string.IsNullOrEmpty(value)) continue;
+
+            foreach (var m in SecretDetectors.Scan(value, options))
             {
-                foreach (var m in SecretDetectors.Scan(lit.Value, options))
-                {
-                    var (id, name, sev) = Map(m.Kind);
-                    findings.Add(new Finding(id, name, RuleCategory.Security, sev,
-                        $"{m.Description}: {m.Redacted}", pr.Property.Location, pr.Path,
-                        "Move secrets to a secure store; never hardcode credentials."));
-                }
+                var (id, name, sev) = Map(m.Kind);
+                findings.Add(new Finding(id, name, RuleCategory.Security, sev,
+                    $"{m.Description}: {m.Redacted}", pr.Property.Location, pr.Path,
+                    "Move secrets to a secure store; never hardcode credentials."));
             }
         }
 

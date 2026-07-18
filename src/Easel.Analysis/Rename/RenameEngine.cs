@@ -35,10 +35,14 @@ public static class RenameEngine
         if (analysis.Symbols.IsDefined(newName))
             return new RenameResult(false, $"Collision: '{newName}' is already defined. Choose another name.", 0, 0);
 
-        var rx = new Regex($@"\b{Regex.Escape(oldName)}\b");
+        // Whole-word, case-insensitive: Power Fx identifiers are case-insensitive, so a
+        // differently-cased occurrence is the same symbol (and this avoids a false "success
+        // with no change" when the source casing differs from --from).
+        var rx = new Regex($@"\b{Regex.Escape(oldName)}\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-        // Count occurrences that live inside string literals (from the parsed model, so it is
-        // accurate) — these will also be text-replaced and warrant a look.
+        // Count occurrences that live inside string literals (accurate, from the parsed model)
+        // — these get text-replaced too and warrant a look (rename is preview).
         int stringHits = analysis.Model.AllProperties()
             .Where(p => p.Property.HasFormula)
             .SelectMany(p => analysis.Fx.Facts(p.Property.Formula).Strings)
@@ -50,13 +54,25 @@ public static class RenameEngine
 
         foreach (var file in files)
         {
-            var text = File.ReadAllText(file);
-            int count = rx.Matches(text).Count;
-            if (count == 0) continue;
-            File.WriteAllText(file, rx.Replace(text, newName));
+            var lines = File.ReadAllLines(file);
+            int fileCount = 0;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                // Never rewrite full-line YAML comments.
+                if (lines[i].TrimStart().StartsWith('#')) continue;
+                var matches = rx.Matches(lines[i]).Count;
+                if (matches == 0) continue;
+                lines[i] = rx.Replace(lines[i], newName);
+                fileCount += matches;
+            }
+            if (fileCount == 0) continue;
+            File.WriteAllLines(file, lines);
             filesChanged++;
-            total += count;
+            total += fileCount;
         }
+
+        if (total == 0)
+            return new RenameResult(false, $"No occurrences of '{oldName}' found to rename.", 0, 0);
 
         return new RenameResult(true, $"Renamed '{oldName}' → '{newName}'.", filesChanged, total, stringHits);
     }

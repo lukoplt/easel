@@ -13,7 +13,7 @@ public sealed record ProcessResult(int ExitCode, string StdOut, string StdErr)
 public static class ProcessRunner
 {
     public static ProcessResult Run(string fileName, IEnumerable<string> args, int timeoutMs = 120_000,
-        Action<string>? onStdErrLine = null)
+        Action<string>? onStdErrLine = null, CancellationToken cancellationToken = default)
     {
         var psi = new ProcessStartInfo
         {
@@ -40,10 +40,21 @@ public static class ProcessRunner
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
 
-        if (!p.WaitForExit(timeoutMs))
+        // Responsive wait: poll so cancellation is honoured instead of blocking for the
+        // whole timeout. (There is no WaitForExit overload taking both a timeout and a token.)
+        var sw = Stopwatch.StartNew();
+        while (!p.WaitForExit(100))
         {
-            try { p.Kill(entireProcessTree: true); } catch { /* best effort */ }
-            return new ProcessResult(-1, stdout.ToString(), $"process timed out after {timeoutMs} ms");
+            if (cancellationToken.IsCancellationRequested)
+            {
+                try { p.Kill(entireProcessTree: true); } catch { /* best effort */ }
+                return new ProcessResult(-1, stdout.ToString(), "process cancelled");
+            }
+            if (sw.ElapsedMilliseconds >= timeoutMs)
+            {
+                try { p.Kill(entireProcessTree: true); } catch { /* best effort */ }
+                return new ProcessResult(-1, stdout.ToString(), $"process timed out after {timeoutMs} ms");
+            }
         }
         p.WaitForExit(); // flush async buffers
         return new ProcessResult(p.ExitCode, stdout.ToString(), stderr.ToString());

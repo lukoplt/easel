@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -6,16 +7,13 @@ namespace Easel.Rules;
 /// <summary>Minimal glob matcher supporting <c>*</c>, <c>**</c> and <c>?</c> over '/'-paths.</summary>
 public static class Glob
 {
-    private static readonly Dictionary<string, Regex> Cache = new();
+    // Thread-safe: rules may run in parallel over the same patterns.
+    private static readonly ConcurrentDictionary<string, Regex> Cache = new();
 
     public static bool IsMatch(string path, string pattern)
     {
         var normPath = path.Replace('\\', '/');
-        if (!Cache.TryGetValue(pattern, out var rx))
-        {
-            rx = new Regex(Translate(pattern), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            Cache[pattern] = rx;
-        }
+        var rx = Cache.GetOrAdd(pattern, p => new Regex(Translate(p), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
         return rx.IsMatch(normPath);
     }
 

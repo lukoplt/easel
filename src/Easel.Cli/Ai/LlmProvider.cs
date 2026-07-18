@@ -50,6 +50,11 @@ public sealed class OpenAiCompatibleProvider : ILlmProvider
         var endpoint = _opts.Endpoint
             ?? throw new InvalidOperationException("--endpoint is required to send (e.g. http://localhost:1234/v1/chat/completions).");
 
+        var hasKey = _opts.ApiKey is { Length: > 0 };
+        if (hasKey && !IsSecureOrLocal(endpoint))
+            throw new InvalidOperationException(
+                "Refusing to send an API key over an unencrypted http:// endpoint. Use https, or a local endpoint (localhost).");
+
         using var req = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {
             Content = JsonContent.Create(new
@@ -75,6 +80,18 @@ public sealed class OpenAiCompatibleProvider : ILlmProvider
             .GetProperty("message")
             .GetProperty("content")
             .GetString() ?? "(empty response)";
+    }
+
+    /// <summary>https anywhere, or http only to a loopback host (local model server).</summary>
+    private static bool IsSecureOrLocal(string endpoint)
+    {
+        if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)) return false;
+        if (uri.Scheme == Uri.UriSchemeHttps) return true;
+        if (uri.Scheme != Uri.UriSchemeHttp) return false;
+        var host = uri.Host;
+        return uri.IsLoopback
+            || host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || host is "127.0.0.1" or "::1";
     }
 }
 

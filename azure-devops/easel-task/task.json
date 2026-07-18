@@ -46,6 +46,6 @@
     }
   ],
   "execution": {
-    "PowerShell3": { "target": "easel.ps1" }
+    "Node20_1": { "target": "index.js" }
   }
 }

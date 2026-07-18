@@ -73,8 +73,14 @@ public sealed class SarifReportRenderer
         return json.Replace("\"schema\":", "\"$schema\":");
     }
 
-    private static string Uri(Finding f) =>
-        f.Location.IsKnown ? f.Location.File.Replace('\\', '/') : "app";
+    private static string Uri(Finding f)
+    {
+        if (!f.Location.IsKnown) return "app";
+        // A SARIF artifact URI must be a valid URI reference: escape each path segment so
+        // spaces, '#', '%', '?' etc. don't corrupt the location.
+        var segments = f.Location.File.Replace('\\', '/').Split('/');
+        return string.Join('/', segments.Select(System.Uri.EscapeDataString));
+    }
 
     private static string Level(Severity s) => s switch
     {

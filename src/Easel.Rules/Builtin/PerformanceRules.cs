@@ -76,10 +76,13 @@ public sealed class NPlusOneRule : RuleBase
         {
             var facts = ctx.Fx.Facts(pr.Property.Formula);
             var reported = false;
-            foreach (var forAll in facts.Calls.Where(c => c.Name is "ForAll"))
+            foreach (var forAll in facts.Calls.Where(c => c.Is("ForAll")))
             {
                 if (reported) break;
-                if (AstMetrics.ContainsCall(forAll.Node, DataOps))
+                // Only the loop BODY (last argument) counts — a data op in the source
+                // table argument is a normal query, not an N+1.
+                var body = forAll.Arg(forAll.Args.Count - 1);
+                if (body is not null && forAll.Args.Count >= 2 && AstMetrics.ContainsCall(body, DataOps))
                 {
                     reported = true;
                     yield return Report(
@@ -114,15 +117,14 @@ public sealed class DelegationRule : RuleBase
         {
             var facts = ctx.Fx.Facts(pr.Property.Formula);
             var reported = false;
-            foreach (var q in facts.Calls.Where(c => QueryFns.Contains(c.Name)))
+            foreach (var q in facts.Calls.Where(c => c.IsAny(QueryFns)))
             {
                 if (reported) break;
-                // First arg must be a bare data source (not a known collection/variable).
                 if (q.Arg(0) is not Microsoft.PowerFx.Syntax.FirstNameNode src) continue;
                 var name = src.Ident.Name.Value;
-                var def = ctx.Symbols.DefinitionsOf(name).FirstOrDefault();
-                var isLocalData = def is { Kind: SymbolKind.Collection or SymbolKind.GlobalVariable or SymbolKind.ContextVariable };
-                if (isLocalData) continue; // in-memory, delegation not relevant
+                // Only flag a KNOWN data source. An unknown identifier (control, parameter,
+                // component prop…) is not assumed to be a remote source — stay conservative.
+                if (!ctx.Symbols.DefinitionsOf(name).Any(d => d.Kind == SymbolKind.DataSource)) continue;
 
                 if (AstMetrics.ContainsCall(q.Node, NonDelegable))
                 {

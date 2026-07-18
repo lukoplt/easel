@@ -6,6 +6,11 @@ namespace Easel.Fx;
 public sealed record FxCall(string Name, string? Namespace, IReadOnlyList<TexlNode> Args, CallNode Node)
 {
     public TexlNode? Arg(int i) => i >= 0 && i < Args.Count ? Args[i] : null;
+
+    /// <summary>Case-insensitive function-name match (Power Fx is case-insensitive).</summary>
+    public bool Is(string name) => string.Equals(Name, name, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsAny(params string[] names) => names.Any(Is);
 }
 
 /// <summary>An identifier reference (a bare first-name like a variable or data source).</summary>
@@ -67,22 +72,18 @@ public sealed class FxFactsWalker : IdentityTexlVisitor
 
     private void CaptureWrite(string fn, IReadOnlyList<TexlNode> args)
     {
-        switch (fn)
-        {
-            case "Set" when args.Count > 0 && args[0] is FirstNameNode s:
-                _writes.Add(new FxWrite(s.Ident.Name.Value, FxWriteKind.Set, s.GetCompleteSpan().Min));
-                break;
-            case "Collect" when args.Count > 0 && args[0] is FirstNameNode c:
-                _writes.Add(new FxWrite(c.Ident.Name.Value, FxWriteKind.Collect, c.GetCompleteSpan().Min));
-                break;
-            case "ClearCollect" when args.Count > 0 && args[0] is FirstNameNode cc:
-                _writes.Add(new FxWrite(cc.Ident.Name.Value, FxWriteKind.ClearCollect, cc.GetCompleteSpan().Min));
-                break;
-            case "UpdateContext" when args.Count > 0 && args[0] is RecordNode rec:
-                foreach (var id in rec.Ids)
-                    _writes.Add(new FxWrite(id.Name.Value, FxWriteKind.UpdateContext, rec.GetCompleteSpan().Min));
-                break;
-        }
+        // Power Fx function names are case-insensitive (set(...) == Set(...)).
+        bool Is(string name) => string.Equals(fn, name, StringComparison.OrdinalIgnoreCase);
+
+        if (Is("Set") && args.Count > 0 && args[0] is FirstNameNode s)
+            _writes.Add(new FxWrite(s.Ident.Name.Value, FxWriteKind.Set, s.GetCompleteSpan().Min));
+        else if (Is("Collect") && args.Count > 0 && args[0] is FirstNameNode c)
+            _writes.Add(new FxWrite(c.Ident.Name.Value, FxWriteKind.Collect, c.GetCompleteSpan().Min));
+        else if (Is("ClearCollect") && args.Count > 0 && args[0] is FirstNameNode cc)
+            _writes.Add(new FxWrite(cc.Ident.Name.Value, FxWriteKind.ClearCollect, cc.GetCompleteSpan().Min));
+        else if (Is("UpdateContext") && args.Count > 0 && args[0] is RecordNode rec)
+            foreach (var id in rec.Ids)
+                _writes.Add(new FxWrite(id.Name.Value, FxWriteKind.UpdateContext, rec.GetCompleteSpan().Min));
     }
 
     public override void Visit(FirstNameNode node) =>

@@ -124,11 +124,16 @@ public sealed partial class PacRunner
         }
     }
 
-    /// <summary>Deterministic temp folder for an input path (content of the source path + size).</summary>
+    /// <summary>
+    /// A per-run temp folder for an input path. The input hash keeps it recognisable while a
+    /// unique suffix (PID + GUID) stops concurrent runs on the same input from clobbering or
+    /// deleting each other's data.
+    /// </summary>
     public static string TempFolderFor(string inputPath)
     {
         var basis = Path.GetFullPath(inputPath);
         var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(basis)))[..12];
-        return Path.Combine(Path.GetTempPath(), "easel", hash);
+        var unique = $"{Environment.ProcessId:x}-{Guid.NewGuid():N}"[..20];
+        return Path.Combine(Path.GetTempPath(), "easel", $"{hash}-{unique}");
     }
 }

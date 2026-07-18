@@ -50,7 +50,15 @@ public static class SourcePreparer
                 var dest = PacRunner.TempFolderFor(path);
                 if (Directory.Exists(dest)) Directory.Delete(dest, recursive: true);
                 log?.Invoke($"Unpacking {Path.GetFileName(path)} via pac…");
-                pac.UnpackMsapp(path, dest, line => log?.Invoke(line));
+                try
+                {
+                    pac.UnpackMsapp(path, dest, line => log?.Invoke(line));
+                }
+                catch
+                {
+                    TryDelete(dest);   // never leave a half-unpacked temp behind
+                    throw;
+                }
                 return new PreparedSource(dest, resolved.Kind, path, isTemp: true, keep: keepTemp);
             }
 
@@ -60,30 +68,50 @@ public static class SourcePreparer
                 var extractDir = PacRunner.TempFolderFor(path) + "-sol";
                 if (Directory.Exists(extractDir)) Directory.Delete(extractDir, recursive: true);
                 log?.Invoke($"Extracting solution {Path.GetFileName(path)}…");
-                System.IO.Compression.ZipFile.ExtractToDirectory(path, extractDir);
+                try
+                {
+                    SafeZip.Extract(path, extractDir);   // guards against zip bombs / zip slip
 
-                var msapps = Directory
-                    .EnumerateFiles(extractDir, "*.msapp", SearchOption.AllDirectories)
-                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
+                    var msapps = Directory
+                        .EnumerateFiles(extractDir, "*.msapp", SearchOption.AllDirectories)
+                        .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
 
-                if (msapps.Count == 0)
-                    throw new InputException("No canvas app (.msapp) found in the solution.");
-                if (msapps.Count > 1)
-                    throw new InputException(
-                        $"Solution contains {msapps.Count} canvas apps. Pass one directly:\n  " +
-                        string.Join("\n  ", msapps));
+                    if (msapps.Count == 0)
+                        throw new InputException("No canvas app (.msapp) found in the solution.");
+                    if (msapps.Count > 1)
+                        throw new InputException(
+                            $"Solution contains {msapps.Count} canvas apps. Pass one directly:\n  " +
+                            string.Join("\n  ", msapps));
 
-                var dest = PacRunner.TempFolderFor(msapps[0]);
-                if (Directory.Exists(dest)) Directory.Delete(dest, recursive: true);
-                log?.Invoke($"Unpacking {Path.GetFileName(msapps[0])} via pac…");
-                pac.UnpackMsapp(msapps[0], dest, line => log?.Invoke(line));
-                try { Directory.Delete(extractDir, recursive: true); } catch { /* best effort */ }
-                return new PreparedSource(dest, resolved.Kind, path, isTemp: true, keep: keepTemp);
+                    var dest = PacRunner.TempFolderFor(msapps[0]);
+                    if (Directory.Exists(dest)) Directory.Delete(dest, recursive: true);
+                    log?.Invoke($"Unpacking {Path.GetFileName(msapps[0])} via pac…");
+                    try
+                    {
+                        pac.UnpackMsapp(msapps[0], dest, line => log?.Invoke(line));
+                    }
+                    catch
+                    {
+                        TryDelete(dest);
+                        throw;
+                    }
+                    return new PreparedSource(dest, resolved.Kind, path, isTemp: true, keep: keepTemp);
+                }
+                finally
+                {
+                    TryDelete(extractDir);   // the extracted solution is always disposable
+                }
             }
 
             default:
                 throw new InputException(resolved.Message);
         }
+    }
+
+    private static void TryDelete(string dir)
+    {
+        if (Directory.Exists(dir))
+            try { Directory.Delete(dir, recursive: true); } catch { /* best effort */ }
     }
 }
