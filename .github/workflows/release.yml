@@ -2,7 +2,9 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    # Full semver tags only. The floating action tags (v0, v0.1) must NOT trigger a
+    # release — MinVer doesn't recognise them and would publish a junk 0.0.0-alpha package.
+    tags: ['v[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+-*']
 
 jobs:
   # Gate: never publish a release or package that fails the test suite.
