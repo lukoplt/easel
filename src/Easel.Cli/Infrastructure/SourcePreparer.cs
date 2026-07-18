@@ -52,7 +52,7 @@ public static class SourcePreparer
                 log?.Invoke($"Unpacking {Path.GetFileName(path)} via pac…");
                 try
                 {
-                    pac.UnpackMsapp(path, dest, line => log?.Invoke(line));
+                    pac.UnpackMsapp(path, dest, line => log?.Invoke(line), AppCancellation.Token);
                 }
                 catch
                 {
@@ -89,7 +89,7 @@ public static class SourcePreparer
                     log?.Invoke($"Unpacking {Path.GetFileName(msapps[0])} via pac…");
                     try
                     {
-                        pac.UnpackMsapp(msapps[0], dest, line => log?.Invoke(line));
+                        pac.UnpackMsapp(msapps[0], dest, line => log?.Invoke(line), AppCancellation.Token);
                     }
                     catch
                     {

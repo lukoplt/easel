@@ -14,7 +14,7 @@ public sealed record FxCall(string Name, string? Namespace, IReadOnlyList<TexlNo
 }
 
 /// <summary>An identifier reference (a bare first-name like a variable or data source).</summary>
-public sealed record FxName(string Name, int SpanStart);
+public sealed record FxName(string Name, int SpanStart, int SpanEnd);
 
 /// <summary>Kind of state write detected in a formula.</summary>
 public enum FxWriteKind { Set, UpdateContext, Collect, ClearCollect }
@@ -86,8 +86,11 @@ public sealed class FxFactsWalker : IdentityTexlVisitor
                 _writes.Add(new FxWrite(id.Name.Value, FxWriteKind.UpdateContext, rec.GetCompleteSpan().Min));
     }
 
-    public override void Visit(FirstNameNode node) =>
-        _names.Add(new FxName(node.Ident.Name.Value, node.GetCompleteSpan().Min));
+    public override void Visit(FirstNameNode node)
+    {
+        var span = node.GetCompleteSpan();
+        _names.Add(new FxName(node.Ident.Name.Value, span.Min, span.Lim));
+    }
 
     public override void Visit(StrLitNode node)
     {

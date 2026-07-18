@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using Easel.Core;
+using Easel.Core.Symbols;
+using YamlDotNet.RepresentationModel;
 
 namespace Easel.Analysis.Rename;
 
@@ -11,16 +13,17 @@ public sealed record RenameResult(
     int StringLiteralHits = 0);
 
 /// <summary>
-/// Renames an identifier across an unpacked source folder (preview). Whole-word matching
-/// over pa.yaml / fx.yaml text, with a pre-flight collision check against the symbol table.
-/// Operates in place on the given folder — callers pass a temp copy, never the original input.
-///
-/// Whole-word matching avoids substring hits (varPopup ≠ varPopupVisible). It cannot,
-/// however, tell an identifier apart from the same word inside a string literal, so those
-/// occurrences are counted and reported for the user to verify (rename is preview).
+/// Renames an identifier across an unpacked source folder (preview). AST-precise: it only
+/// rewrites Power Fx identifier tokens inside <c>=</c>-prefixed formula values, so string
+/// literals, comments and YAML keys are never touched. Structural renames (controls/screens)
+/// are refused because those live as YAML keys. Operates in place on the given folder —
+/// callers pass a temp copy, never the original input.
 /// </summary>
 public static class RenameEngine
 {
+    private static readonly SymbolKind[] Renamable =
+        { SymbolKind.GlobalVariable, SymbolKind.ContextVariable, SymbolKind.Collection, SymbolKind.NamedFormula };
+
     public static RenameResult Rename(string folder, string oldName, string newName, AppAnalysis analysis)
     {
         if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName))
@@ -30,23 +33,22 @@ public static class RenameEngine
         if (!IsValidIdentifier(newName))
             return new RenameResult(false, $"'{newName}' is not a valid identifier.", 0, 0);
 
-        if (!analysis.Symbols.IsDefined(oldName))
+        var defs = analysis.Symbols.DefinitionsOf(oldName);
+        if (defs.Count == 0)
             return new RenameResult(false, $"Symbol '{oldName}' is not defined in this app.", 0, 0);
         if (analysis.Symbols.IsDefined(newName))
             return new RenameResult(false, $"Collision: '{newName}' is already defined. Choose another name.", 0, 0);
+        if (!defs.All(d => Renamable.Contains(d.Kind)))
+            return new RenameResult(false,
+                $"'{oldName}' is a {defs.First(d => !Renamable.Contains(d.Kind)).Kind}. Preview rename supports variables, collections and named formulas only.", 0, 0);
 
-        // Whole-word, case-insensitive: Power Fx identifiers are case-insensitive, so a
-        // differently-cased occurrence is the same symbol (and this avoids a false "success
-        // with no change" when the source casing differs from --from).
-        var rx = new Regex($@"\b{Regex.Escape(oldName)}\b",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
-        // Count occurrences that live inside string literals (accurate, from the parsed model)
-        // — these get text-replaced too and warrant a look (rename is preview).
+        // Occurrences that live inside string literals are, by construction, NOT touched by
+        // the AST-precise rewrite — report them so the user knows they were intentionally left.
+        var wordRx = new Regex($@"\b{Regex.Escape(oldName)}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         int stringHits = analysis.Model.AllProperties()
             .Where(p => p.Property.HasFormula)
             .SelectMany(p => analysis.Fx.Facts(p.Property.Formula).Strings)
-            .Count(s => rx.IsMatch(s.Value));
+            .Count(s => wordRx.IsMatch(s.Value));
 
         int filesChanged = 0, total = 0;
         var files = Directory.EnumerateFiles(folder, "*.pa.yaml", SearchOption.AllDirectories)
@@ -54,27 +56,91 @@ public static class RenameEngine
 
         foreach (var file in files)
         {
-            var lines = File.ReadAllLines(file);
-            int fileCount = 0;
-            for (int i = 0; i < lines.Length; i++)
+            int fileCount;
+            try
             {
-                // Never rewrite full-line YAML comments.
-                if (lines[i].TrimStart().StartsWith('#')) continue;
-                var matches = rx.Matches(lines[i]).Count;
-                if (matches == 0) continue;
-                lines[i] = rx.Replace(lines[i], newName);
-                fileCount += matches;
+                fileCount = RewriteFile(file, oldName, newName, analysis);
+            }
+            catch (YamlDotNet.Core.YamlException)
+            {
+                continue; // a malformed source file is skipped, not fatal
             }
             if (fileCount == 0) continue;
-            File.WriteAllLines(file, lines);
             filesChanged++;
             total += fileCount;
         }
 
         if (total == 0)
-            return new RenameResult(false, $"No occurrences of '{oldName}' found to rename.", 0, 0);
+            return new RenameResult(false, $"No identifier occurrences of '{oldName}' found to rename.", 0, 0);
 
         return new RenameResult(true, $"Renamed '{oldName}' → '{newName}'.", filesChanged, total, stringHits);
+    }
+
+    private static int RewriteFile(string file, string oldName, string newName, AppAnalysis analysis)
+    {
+        using var reader = new StreamReader(file);
+        var stream = new YamlStream();
+        stream.Load(reader);
+        reader.Close();
+
+        int count = 0;
+        foreach (var doc in stream.Documents)
+            foreach (var scalar in Scalars(doc.RootNode))
+                count += RewriteScalar(scalar, oldName, newName, analysis);
+
+        if (count == 0) return 0;
+
+        using var writer = new StreamWriter(file, append: false);
+        stream.Save(writer, assignAnchors: false);
+        return count;
+    }
+
+    /// <summary>Rewrite identifier tokens inside a single '='-prefixed formula scalar.</summary>
+    private static int RewriteScalar(YamlScalarNode scalar, string oldName, string newName, AppAnalysis analysis)
+    {
+        var raw = scalar.Value;
+        if (raw is null) return 0;
+        var trimmed = raw.TrimStart();
+        if (!trimmed.StartsWith('=')) return 0;   // only formula values start with '='
+
+        var formula = trimmed[1..];
+        var spans = analysis.Fx.Facts(formula).FirstNames
+            .Where(n => string.Equals(n.Name, oldName, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(n => n.SpanStart)   // replace right-to-left to keep offsets valid
+            .ToList();
+        if (spans.Count == 0) return 0;
+
+        foreach (var s in spans)
+        {
+            if (s.SpanStart < 0 || s.SpanEnd > formula.Length || s.SpanStart >= s.SpanEnd) continue;
+            formula = formula[..s.SpanStart] + newName + formula[s.SpanEnd..];
+        }
+
+        scalar.Value = "=" + formula;
+        return spans.Count;
+    }
+
+    private static IEnumerable<YamlScalarNode> Scalars(YamlNode node)
+    {
+        switch (node)
+        {
+            case YamlScalarNode s:
+                yield return s;
+                break;
+            case YamlMappingNode m:
+                foreach (var kv in m.Children)
+                {
+                    // Keys are never rewritten (they don't start with '='), but recurse for completeness.
+                    foreach (var x in Scalars(kv.Key)) yield return x;
+                    foreach (var x in Scalars(kv.Value)) yield return x;
+                }
+                break;
+            case YamlSequenceNode seq:
+                foreach (var item in seq.Children)
+                    foreach (var x in Scalars(item))
+                        yield return x;
+                break;
+        }
     }
 
     private static bool IsValidIdentifier(string name) =>

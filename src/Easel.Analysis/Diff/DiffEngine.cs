@@ -27,17 +27,21 @@ public static class DiffEngine
         var fx = new FxParseService();
         var changes = new List<ElementChange>();
 
-        // --- Screens ---
+        // --- Screens (added / removed / property changes) ---
         var baseScreens = baseModel.Screens.ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
         var headScreens = headModel.Screens.ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
         foreach (var name in headScreens.Keys.Where(n => !baseScreens.ContainsKey(n)))
             changes.Add(new ElementChange(ChangeKind.Added, "Screen", name));
         foreach (var name in baseScreens.Keys.Where(n => !headScreens.ContainsKey(n)))
             changes.Add(new ElementChange(ChangeKind.Removed, "Screen", name));
+        foreach (var (name, headS) in headScreens)
+            if (baseScreens.TryGetValue(name, out var baseS))
+                foreach (var change in PropertyChanges(baseS.Properties, headS.Properties, fx))
+                    changes.Add(change with { Name = $"{name}.{change.Name}" });
 
-        // --- Controls ---
-        var baseControls = Flatten(baseModel).ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
-        var headControls = Flatten(headModel).ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
+        // --- Controls (deduped by name — a scoped duplicate must not throw) ---
+        var baseControls = FlattenByName(baseModel);
+        var headControls = FlattenByName(headModel);
 
         var added = headControls.Values.Where(c => !baseControls.ContainsKey(c.Name)).ToList();
         var removed = baseControls.Values.Where(c => !headControls.ContainsKey(c.Name)).ToList();
@@ -89,25 +93,47 @@ public static class DiffEngine
             baseModel.App.Formulas.ToDictionary(f => f.Name, f => f.Formula, StringComparer.OrdinalIgnoreCase),
             headModel.App.Formulas.ToDictionary(f => f.Name, f => f.Formula, StringComparer.OrdinalIgnoreCase));
 
-        // --- Components (definitions) ---
-        var baseComps = baseModel.Components.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var headComps = headModel.Components.Select(c => c.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var n in headComps.Except(baseComps)) changes.Add(new ElementChange(ChangeKind.Added, "Component", n));
-        foreach (var n in baseComps.Except(headComps)) changes.Add(new ElementChange(ChangeKind.Removed, "Component", n));
+        // --- Components (definitions + their properties) ---
+        var baseComp = baseModel.Components.GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var headComp = headModel.Components.GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        foreach (var n in headComp.Keys.Where(k => !baseComp.ContainsKey(k))) changes.Add(new ElementChange(ChangeKind.Added, "Component", n));
+        foreach (var n in baseComp.Keys.Where(k => !headComp.ContainsKey(k))) changes.Add(new ElementChange(ChangeKind.Removed, "Component", n));
+        foreach (var (n, hc) in headComp)
+            if (baseComp.TryGetValue(n, out var bc))
+                foreach (var change in PropertyChanges(bc.Properties, hc.Properties, fx))
+                    changes.Add(change with { Name = $"{n}.{change.Name}" });
 
-        // --- Data sources ---
-        var baseDs = baseModel.DataSources.Select(d => d.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var headDs = headModel.DataSources.Select(d => d.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var n in headDs.Except(baseDs)) changes.Add(new ElementChange(ChangeKind.Added, "DataSource", n));
-        foreach (var n in baseDs.Except(headDs)) changes.Add(new ElementChange(ChangeKind.Removed, "DataSource", n));
+        // --- Data sources (name + metadata) ---
+        DiffMetadata(changes, "DataSource",
+            baseModel.DataSources.ToDictionary(d => d.Name, d => $"{d.Type}|{d.ConnectorId}", StringComparer.OrdinalIgnoreCase),
+            headModel.DataSources.ToDictionary(d => d.Name, d => $"{d.Type}|{d.ConnectorId}", StringComparer.OrdinalIgnoreCase));
 
-        // --- Media ---
-        var baseMedia = baseModel.Media.Select(m => m.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var headMedia = headModel.Media.Select(m => m.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var n in headMedia.Except(baseMedia)) changes.Add(new ElementChange(ChangeKind.Added, "Media", n));
-        foreach (var n in baseMedia.Except(headMedia)) changes.Add(new ElementChange(ChangeKind.Removed, "Media", n));
+        // --- Media (name + metadata) ---
+        DiffMetadata(changes, "Media",
+            baseModel.Media.ToDictionary(m => m.Name, m => $"{m.FileName}|{m.Kind}|{m.SizeBytes}", StringComparer.OrdinalIgnoreCase),
+            headModel.Media.ToDictionary(m => m.Name, m => $"{m.FileName}|{m.Kind}|{m.SizeBytes}", StringComparer.OrdinalIgnoreCase));
 
         return new DiffReport(changes);
+    }
+
+    /// <summary>Added / removed by name, plus a PropertyChanged when the metadata string differs.</summary>
+    private static void DiffMetadata(List<ElementChange> changes, string kind,
+        IReadOnlyDictionary<string, string> baseMap, IReadOnlyDictionary<string, string> headMap)
+    {
+        foreach (var (name, hv) in headMap)
+        {
+            if (!baseMap.TryGetValue(name, out var bv)) changes.Add(new ElementChange(ChangeKind.Added, kind, name));
+            else if (bv != hv) changes.Add(new ElementChange(ChangeKind.PropertyChanged, kind, name, "metadata changed"));
+        }
+        foreach (var name in baseMap.Keys.Where(k => !headMap.ContainsKey(k)))
+            changes.Add(new ElementChange(ChangeKind.Removed, kind, name));
+    }
+
+    private static Dictionary<string, FlatControl> FlattenByName(AppModel model)
+    {
+        var d = new Dictionary<string, FlatControl>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in Flatten(model)) d[c.Name] = c;   // dedupe: last wins, never throws
+        return d;
     }
 
     private static void DiffByName(List<ElementChange> changes, string kind,
@@ -211,11 +237,12 @@ public static class DiffEngine
     private static string Normalize(string f)
     {
         var sb = new System.Text.StringBuilder(f.Length);
-        bool inString = false;
+        char quote = '\0';   // '\0' = outside; '"' = string; '\'' = quoted identifier
         foreach (var c in f)
         {
-            if (c == '"') { inString = !inString; sb.Append(c); }
-            else if (inString || !char.IsWhiteSpace(c)) sb.Append(c);
+            if (quote == '\0' && (c == '"' || c == '\'')) { quote = c; sb.Append(c); }
+            else if (quote != '\0' && c == quote) { quote = '\0'; sb.Append(c); }
+            else if (quote != '\0' || !char.IsWhiteSpace(c)) sb.Append(c);
         }
         return sb.ToString();
     }

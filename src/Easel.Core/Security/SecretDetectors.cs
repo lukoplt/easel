@@ -33,30 +33,71 @@ public static partial class SecretDetectors
     [GeneratedRegex(@"(?i)https?://[^/\s:@]+:[^/\s:@]+@")]
     private static partial Regex UrlCredentialsRx();
 
-    public static IEnumerable<SecretMatch> Scan(string literal, SecretScanOptions? options = null)
+    /// <summary>
+    /// Detect secrets in a value. Set <paramref name="includeEntropy"/> false when scanning a
+    /// raw formula/expression (not a string literal) — the generic high-entropy heuristic
+    /// otherwise fires on identifier chains like <c>DropdownCity_2.SelectedText.Value</c>.
+    /// The allowlist suppresses only the specific match it covers, never the whole value.
+    /// </summary>
+    public static IReadOnlyList<SecretMatch> Scan(string value, SecretScanOptions? options = null, bool includeEntropy = true)
     {
         var opts = options ?? SecretScanOptions.Default;
-        if (string.IsNullOrWhiteSpace(literal)) yield break;
-        if (opts.Allowlist.Any(a => literal.Contains(a, StringComparison.OrdinalIgnoreCase))) yield break;
+        var results = new List<SecretMatch>();
+        if (string.IsNullOrWhiteSpace(value)) return results;
 
-        if (UrlCredentialsRx().IsMatch(literal))
-            yield return new SecretMatch(SecretKind.UrlCredentials, "URL contains embedded credentials", Redact(literal));
-        if (ConnectionStringRx().IsMatch(literal))
-            yield return new SecretMatch(SecretKind.ConnectionString, "Looks like a connection string with a secret", Redact(literal));
-        if (ApiKeyRx().IsMatch(literal))
-            yield return new SecretMatch(SecretKind.ApiKey, "Looks like an API key", Redact(literal));
-        if (TokenRx().IsMatch(literal))
-            yield return new SecretMatch(SecretKind.Token, "Looks like an access token", Redact(literal));
+        bool Allowed(string raw) => opts.Allowlist.Any(a =>
+            raw.Contains(a, StringComparison.OrdinalIgnoreCase) ||
+            a.Contains(raw, StringComparison.OrdinalIgnoreCase));
 
-        // High-entropy generic secret — only if no specific pattern already matched.
-        var token = LongestToken(literal);
-        if (token.Length >= opts.MinEntropyLength &&
-            LooksRandom(token) &&
-            ShannonEntropy(token) >= opts.EntropyThreshold)
+        void Add(SecretKind kind, string desc, string raw)
         {
-            yield return new SecretMatch(SecretKind.HighEntropy,
-                $"High-entropy string (entropy {ShannonEntropy(token):0.0})", Redact(token));
+            if (!Allowed(raw)) results.Add(new SecretMatch(kind, desc, Redact(raw)));
         }
+
+        var url = UrlCredentialsRx().Match(value);
+        if (url.Success) Add(SecretKind.UrlCredentials, "URL contains embedded credentials", url.Value);
+        var cs = ConnectionStringRx().Match(value);
+        if (cs.Success) Add(SecretKind.ConnectionString, "Looks like a connection string with a secret", cs.Value);
+        var ak = ApiKeyRx().Match(value);
+        if (ak.Success) Add(SecretKind.ApiKey, "Looks like an API key", ak.Value);
+        var tk = TokenRx().Match(value);
+        if (tk.Success) Add(SecretKind.Token, "Looks like an access token", tk.Value);
+
+        if (includeEntropy)
+        {
+            var token = LongestToken(value);
+            if (token.Length >= opts.MinEntropyLength && LooksRandom(token) &&
+                ShannonEntropy(token) >= opts.EntropyThreshold)
+                Add(SecretKind.HighEntropy, $"High-entropy string (entropy {ShannonEntropy(token):0.0})", token);
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Scan a property: full detection (incl. entropy) on its actual string literals, plus
+    /// pattern-only detection on the raw value so secrets in unparsable formulas or non-quoted
+    /// values are still caught — without the entropy heuristic firing on expressions. Deduped.
+    /// </summary>
+    public static IReadOnlyList<SecretMatch> ScanProperty(
+        string rawValue, IEnumerable<string> stringLiterals, SecretScanOptions? options = null)
+    {
+        var opts = options ?? SecretScanOptions.Default;
+        var seen = new HashSet<(SecretKind, string)>();
+        var results = new List<SecretMatch>();
+
+        void Take(IEnumerable<SecretMatch> matches)
+        {
+            foreach (var m in matches)
+                if (seen.Add((m.Kind, m.Redacted)))
+                    results.Add(m);
+        }
+
+        foreach (var literal in stringLiterals)
+            Take(Scan(literal, opts, includeEntropy: true));
+        Take(Scan(rawValue, opts, includeEntropy: false));
+
+        return results;
     }
 
     public static double ShannonEntropy(string s)

@@ -37,7 +37,7 @@ public static class RenameCommand
             if (Directory.Exists(temp)) Directory.Delete(temp, recursive: true);
 
             AnsiConsole.MarkupLine("[grey]Unpacking via pac…[/]");
-            pac.UnpackMsapp(input, temp, line => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(line)}[/]"));
+            pac.UnpackMsapp(input, temp, line => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(line)}[/]"), AppCancellation.Token);
 
             try
             {
@@ -55,7 +55,7 @@ public static class RenameCommand
 
                 var outPath = output ?? DefaultOutput(input);
                 AnsiConsole.MarkupLine("[grey]Packing via pac…[/]");
-                pac.PackMsapp(temp, outPath, line => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(line)}[/]"));
+                pac.PackMsapp(temp, outPath, line => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(line)}[/]"), AppCancellation.Token);
 
                 AnsiConsole.MarkupLine($"[green]✓[/] {Markup.Escape(result.Message)} " +
                     $"({result.Occurrences} occurrence(s) in {result.FilesChanged} file(s))");

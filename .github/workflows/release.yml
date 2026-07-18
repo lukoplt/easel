@@ -77,7 +77,9 @@ jobs:
 
   nuget:
     name: Publish dotnet tool
-    needs: test
+    # After the GitHub release: publishing NuGet only once the release exists narrows the
+    # partial-release window (a fully atomic cross-service publish is not achievable).
+    needs: [test, release]
     runs-on: ubuntu-latest
     # Trusted Publishing (OIDC) — no API-key secret. Requires a Trusted Publisher
     # policy on nuget.org and a repo variable NUGET_USER (your nuget.org username).

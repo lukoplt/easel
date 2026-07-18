@@ -43,6 +43,15 @@ const args = ['lint', appPath, '--format', format, '--fail-on', failOn];
 if (output) args.push('--output', output);
 
 const code = run(easel, args);
+
+// Publish the SARIF report as a build artifact (as the task declares).
+if (format === 'sarif' && output) {
+  const abs = path.resolve(output);
+  if (require('fs').existsSync(abs)) {
+    console.log(`##vso[artifact.upload containerfolder=easel;artifactname=easel-sarif]${abs}`);
+  }
+}
+
 if (code !== 0) {
   console.error(`##vso[task.complete result=Failed;]easel exit ${code}`);
 }

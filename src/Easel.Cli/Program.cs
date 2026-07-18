@@ -1,5 +1,8 @@
 using System.CommandLine;
 using Easel.Cli.Commands;
+using Easel.Cli.Infrastructure;
+
+AppCancellation.Install();   // Ctrl+C cancels running pac subprocesses
 
 var root = new RootCommand("easel — static analysis for Power Apps canvas source");
 

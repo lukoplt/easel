@@ -29,10 +29,15 @@ public static class DependencyGraphBuilder
         {
             var defs = symbols.DefinitionsOf(name);
             if (defs.Count == 0) return null;
-            var def = defs.FirstOrDefault(d => d.Kind == SymbolKind.ContextVariable
-                          && string.Equals(d.Scope, scope, StringComparison.OrdinalIgnoreCase))
-                      ?? defs[0];
-            return NodeId(def.Kind, def.Name, def.Scope);
+
+            // A context variable resolves only within its own screen scope.
+            var sameScope = defs.FirstOrDefault(d => d.Kind == SymbolKind.ContextVariable
+                && string.Equals(d.Scope, scope, StringComparison.OrdinalIgnoreCase));
+            if (sameScope is not null) return NodeId(sameScope.Kind, sameScope.Name, sameScope.Scope);
+
+            // Otherwise an app-wide symbol; do NOT fall back to a context var in a different screen.
+            var appWide = defs.FirstOrDefault(d => d.Kind != SymbolKind.ContextVariable);
+            return appWide is null ? null : NodeId(appWide.Kind, appWide.Name, appWide.Scope);
         }
 
         foreach (var pr in model.AllProperties())

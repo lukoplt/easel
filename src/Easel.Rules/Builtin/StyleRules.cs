@@ -89,7 +89,7 @@ public sealed class TimerSideEffectRule : RuleBase
                     if (p is not { HasFormula: true }) continue;
                     var facts = ctx.Fx.Facts(p.Formula);
                     var sideEffects = facts.Writes.Count +
-                        facts.Calls.Count(x => x.Name is "Navigate" or "Patch" or "Remove" or "RemoveIf");
+                        facts.Calls.Count(x => x.IsAny("Navigate", "Patch", "Remove", "RemoveIf"));
                     if (sideEffects > 0)
                         yield return Report(
                             $"Timer '{c.Name}'.{handler} performs {sideEffects} side-effect(s) on a timer.",

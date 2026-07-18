@@ -65,25 +65,29 @@ public sealed partial class PacRunner
     }
 
     /// <summary>Unpack a .msapp into <paramref name="destination"/> via <c>pac canvas unpack</c>.</summary>
-    public void UnpackMsapp(string msappPath, string destination, Action<string>? onPacLine = null)
+    public void UnpackMsapp(string msappPath, string destination, Action<string>? onPacLine = null,
+        CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(destination);
         var res = ProcessRunner.Run(_pacPath,
             new[] { "canvas", "unpack", "--msapp", msappPath, "--sources", destination },
             timeoutMs: 300_000,
-            onStdErrLine: line => onPacLine?.Invoke($"[pac] {line}"));
+            onStdErrLine: line => onPacLine?.Invoke($"[pac] {line}"),
+            cancellationToken: cancellationToken);
 
         if (!res.Success)
             throw new PacException($"pac canvas unpack failed (exit {res.ExitCode}).\n{res.Combined}");
     }
 
     /// <summary>Pack an unpacked source folder into a new .msapp via <c>pac canvas pack</c>.</summary>
-    public void PackMsapp(string sourceFolder, string msappOut, Action<string>? onPacLine = null)
+    public void PackMsapp(string sourceFolder, string msappOut, Action<string>? onPacLine = null,
+        CancellationToken cancellationToken = default)
     {
         var res = ProcessRunner.Run(_pacPath,
             new[] { "canvas", "pack", "--msapp", msappOut, "--sources", sourceFolder },
             timeoutMs: 300_000,
-            onStdErrLine: line => onPacLine?.Invoke($"[pac] {line}"));
+            onStdErrLine: line => onPacLine?.Invoke($"[pac] {line}"),
+            cancellationToken: cancellationToken);
 
         if (!res.Success)
             throw new PacException($"pac canvas pack failed (exit {res.ExitCode}).\n{res.Combined}");

@@ -34,7 +34,8 @@ public abstract class SecretRuleBase : RuleBase
         {
             var value = pr.Property.Formula;
             if (string.IsNullOrEmpty(value)) continue;
-            foreach (var match in SecretDetectors.Scan(value, opts))
+            var literals = ctx.Fx.Facts(value).Strings.Select(s => s.Value);
+            foreach (var match in SecretDetectors.ScanProperty(value, literals, opts))
                 yield return (pr, match);
         }
     }

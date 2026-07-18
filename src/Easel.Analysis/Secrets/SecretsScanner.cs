@@ -20,14 +20,15 @@ public static class SecretsScanner
     {
         var findings = new List<Finding>();
 
-        // Scan the RAW property value (works for literals and unparsable formulas too —
-        // a secret must never be missed just because the surrounding formula didn't parse).
+        // Full detection on real string literals + pattern-only on the raw value (so secrets
+        // in unparsable formulas / non-quoted values are caught without entropy false positives).
         foreach (var pr in a.Model.AllProperties())
         {
             var value = pr.Property.Formula;
             if (string.IsNullOrEmpty(value)) continue;
+            var literals = a.Fx.Facts(value).Strings.Select(s => s.Value);
 
-            foreach (var m in SecretDetectors.Scan(value, options))
+            foreach (var m in SecretDetectors.ScanProperty(value, literals, options))
             {
                 var (id, name, sev) = Map(m.Kind);
                 findings.Add(new Finding(id, name, RuleCategory.Security, sev,
