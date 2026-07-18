@@ -47,16 +47,23 @@ public static class ProcessRunner
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                try { p.Kill(entireProcessTree: true); } catch { /* best effort */ }
-                return new ProcessResult(-1, stdout.ToString(), "process cancelled");
+                KillAndDrain(p);
+                cancellationToken.ThrowIfCancellationRequested();
             }
             if (sw.ElapsedMilliseconds >= timeoutMs)
             {
-                try { p.Kill(entireProcessTree: true); } catch { /* best effort */ }
+                KillAndDrain(p);
                 return new ProcessResult(-1, stdout.ToString(), $"process timed out after {timeoutMs} ms");
             }
         }
         p.WaitForExit(); // flush async buffers
         return new ProcessResult(p.ExitCode, stdout.ToString(), stderr.ToString());
+    }
+
+    private static void KillAndDrain(Process process)
+    {
+        try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
+        if (process.WaitForExit(5_000))
+            process.WaitForExit(); // flush redirected async readers
     }
 }

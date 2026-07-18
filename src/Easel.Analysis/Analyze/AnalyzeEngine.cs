@@ -28,8 +28,8 @@ public static class AnalyzeEngine
     {
         var unusedVars = a.Symbols.OfKind(SymbolKind.GlobalVariable)
             .Concat(a.Symbols.OfKind(SymbolKind.ContextVariable))
-            .Where(d => a.Symbols.ReadCount(d.Name) == 0)
-            .DistinctBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(d => a.Symbols.ReadCount(d) == 0)
+            .DistinctBy(d => (d.Name.ToUpperInvariant(), d.Scope?.ToUpperInvariant()))
             .ToList();
 
         var unusedColls = a.Symbols.OfKind(SymbolKind.Collection)
@@ -88,9 +88,10 @@ public static class AnalyzeEngine
 
     public static IReadOnlyList<GraphNode> Impact(AppAnalysis a, string name)
     {
-        var def = a.Symbols.DefinitionsOf(name).FirstOrDefault();
-        if (def is null) return Array.Empty<GraphNode>();
-        return a.Graph.ImpactOf($"{def.Kind}:{def.Name}");
+        return a.Symbols.DefinitionsOf(name)
+            .SelectMany(d => a.Graph.ImpactOf(DependencyGraphBuilder.SymbolNodeId(d)))
+            .DistinctBy(n => n.Id)
+            .ToList();
     }
 
     public static string Graph(AppAnalysis a, string format) =>

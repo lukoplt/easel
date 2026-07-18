@@ -26,9 +26,13 @@ public static class SecretsScanner
         {
             var value = pr.Property.Formula;
             if (string.IsNullOrEmpty(value)) continue;
-            var literals = a.Fx.Facts(value).Strings.Select(s => s.Value);
+            var parse = pr.Property.IsFormula ? a.Fx.Parse(value) : null;
+            var literals = parse is { IsSuccess: true }
+                ? a.Fx.Facts(value).Strings.Select(s => s.Value)
+                : Array.Empty<string>();
 
-            foreach (var m in SecretDetectors.ScanProperty(value, literals, options))
+            foreach (var m in SecretDetectors.ScanProperty(value, literals,
+                         pr.Property.IsFormula, parse?.IsSuccess ?? false, options))
             {
                 var (id, name, sev) = Map(m.Kind);
                 findings.Add(new Finding(id, name, RuleCategory.Security, sev,

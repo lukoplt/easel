@@ -20,7 +20,10 @@ public sealed record DiffReport(IReadOnlyList<ElementChange> Changes)
 /// <summary>Semantic diff of two app models: matches elements, classifies changes.</summary>
 public static class DiffEngine
 {
-    private sealed record FlatControl(string Name, string Type, string Screen, string Parent, Control Control);
+    private sealed record FlatControl(string Name, string Type, string Screen, string Parent, Control Control)
+    {
+        public string ScopedKey => $"{Screen}\0{Name}";
+    }
 
     public static DiffReport Diff(AppModel baseModel, AppModel headModel, double renameThreshold = 0.6)
     {
@@ -39,12 +42,24 @@ public static class DiffEngine
                 foreach (var change in PropertyChanges(baseS.Properties, headS.Properties, fx))
                     changes.Add(change with { Name = $"{name}.{change.Name}" });
 
-        // --- Controls (deduped by name — a scoped duplicate must not throw) ---
-        var baseControls = FlattenByName(baseModel);
-        var headControls = FlattenByName(headModel);
+        // --- Controls ---
+        var baseFlat = Flatten(baseModel).ToList();
+        var headFlat = Flatten(headModel).ToList();
+        var duplicatedNames = baseFlat
+            .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.GroupBy(c => c.Screen, StringComparer.OrdinalIgnoreCase).Count() > 1)
+            .Select(g => g.Key)
+            .Concat(headFlat
+                .GroupBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.GroupBy(c => c.Screen, StringComparer.OrdinalIgnoreCase).Count() > 1)
+                .Select(g => g.Key))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        string Key(FlatControl c) => duplicatedNames.Contains(c.Name) ? c.ScopedKey : c.Name;
+        var baseControls = baseFlat.ToDictionary(Key, StringComparer.OrdinalIgnoreCase);
+        var headControls = headFlat.ToDictionary(Key, StringComparer.OrdinalIgnoreCase);
 
-        var added = headControls.Values.Where(c => !baseControls.ContainsKey(c.Name)).ToList();
-        var removed = baseControls.Values.Where(c => !headControls.ContainsKey(c.Name)).ToList();
+        var added = headControls.Where(pair => !baseControls.ContainsKey(pair.Key)).ToList();
+        var removed = baseControls.Where(pair => !headControls.ContainsKey(pair.Key)).ToList();
 
         // Rename heuristic: pair added<->removed of same type by property similarity.
         var renamedFrom = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -52,36 +67,36 @@ public static class DiffEngine
         foreach (var a in added)
         {
             var best = removed
-                .Where(r => !renamedFrom.Contains(r.Name) && r.Type == a.Type)
-                .Select(r => (r, sim: Similarity(r.Control, a.Control)))
+                .Where(r => !renamedFrom.Contains(r.Key) && r.Value.Type == a.Value.Type)
+                .Select(r => (r, sim: Similarity(r.Value.Control, a.Value.Control)))
                 .OrderByDescending(x => x.sim)
                 .FirstOrDefault();
-            if (best.r is not null && best.sim >= renameThreshold)
+            if (!string.IsNullOrEmpty(best.r.Key) && best.sim >= renameThreshold)
             {
-                renamedFrom.Add(best.r.Name);
-                renamedTo.Add(a.Name);
-                changes.Add(new ElementChange(ChangeKind.Renamed, best.r.Type,
-                    $"{best.r.Name} → {a.Name}", $"probable rename ({best.sim:P0} property match)"));
+                renamedFrom.Add(best.r.Key);
+                renamedTo.Add(a.Key);
+                changes.Add(new ElementChange(ChangeKind.Renamed, best.r.Value.Type,
+                    $"{best.r.Value.Name} → {a.Value.Name}", $"probable rename ({best.sim:P0} property match)"));
             }
         }
 
-        foreach (var c in added.Where(c => !renamedTo.Contains(c.Name)))
+        foreach (var c in added.Where(c => !renamedTo.Contains(c.Key)).Select(c => c.Value))
             changes.Add(new ElementChange(ChangeKind.Added, c.Type, c.Name, $"on {c.Screen}"));
-        foreach (var c in removed.Where(c => !renamedFrom.Contains(c.Name)))
+        foreach (var c in removed.Where(c => !renamedFrom.Contains(c.Key)).Select(c => c.Value))
             changes.Add(new ElementChange(ChangeKind.Removed, c.Type, c.Name, $"from {c.Screen}"));
 
         // --- Matched controls: moved + property changes ---
-        foreach (var (name, headC) in headControls)
+        foreach (var (key, headC) in headControls)
         {
-            if (!baseControls.TryGetValue(name, out var baseC)) continue;
+            if (!baseControls.TryGetValue(key, out var baseC)) continue;
 
             if (!string.Equals(baseC.Parent, headC.Parent, StringComparison.OrdinalIgnoreCase) ||
                 !string.Equals(baseC.Screen, headC.Screen, StringComparison.OrdinalIgnoreCase))
-                changes.Add(new ElementChange(ChangeKind.Moved, headC.Type, name,
+                changes.Add(new ElementChange(ChangeKind.Moved, headC.Type, headC.Name,
                     $"{baseC.Screen}/{baseC.Parent} → {headC.Screen}/{headC.Parent}"));
 
             foreach (var change in PropertyChanges(baseC.Control.Properties, headC.Control.Properties, fx))
-                changes.Add(change with { Name = $"{name}.{change.Name}" });
+                changes.Add(change with { Name = $"{headC.Name}.{change.Name}" });
         }
 
         // --- App properties ---
@@ -127,13 +142,6 @@ public static class DiffEngine
         }
         foreach (var name in baseMap.Keys.Where(k => !headMap.ContainsKey(k)))
             changes.Add(new ElementChange(ChangeKind.Removed, kind, name));
-    }
-
-    private static Dictionary<string, FlatControl> FlattenByName(AppModel model)
-    {
-        var d = new Dictionary<string, FlatControl>(StringComparer.OrdinalIgnoreCase);
-        foreach (var c in Flatten(model)) d[c.Name] = c;   // dedupe: last wins, never throws
-        return d;
     }
 
     private static void DiffByName(List<ElementChange> changes, string kind,

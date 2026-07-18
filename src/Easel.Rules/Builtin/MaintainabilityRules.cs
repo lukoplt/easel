@@ -18,8 +18,11 @@ public sealed class UnusedVariableRule : RuleBase
 
         foreach (var def in ctx.Symbols.Definitions.Where(d => kinds.Contains(d.Kind)))
         {
-            if (!seen.Add(def.Name)) continue;
-            if (ctx.Symbols.ReadCount(def.Name) > 0) continue;
+            var identity = def.Kind == SymbolKind.ContextVariable
+                ? $"{def.Kind}:{def.Scope}:{def.Name}"
+                : $"{def.Kind}:{def.Name}";
+            if (!seen.Add(identity)) continue;
+            if (ctx.Symbols.ReadCount(def) > 0) continue;
 
             var noun = def.Kind == SymbolKind.Collection ? "Collection" : "Variable";
             yield return Report(

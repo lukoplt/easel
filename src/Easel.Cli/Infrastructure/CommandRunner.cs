@@ -12,6 +12,11 @@ public static class CommandRunner
         {
             return await body();
         }
+        catch (OperationCanceledException)
+        {
+            AnsiConsole.MarkupLine("[yellow]cancelled[/]");
+            return ExitCode.Cancelled;
+        }
         catch (InputException ex)
         {
             AnsiConsole.MarkupLine($"[red]input error:[/] {Markup.Escape(ex.Message)}");
@@ -34,6 +39,11 @@ public static class CommandRunner
         try
         {
             return body();
+        }
+        catch (OperationCanceledException)
+        {
+            AnsiConsole.MarkupLine("[yellow]cancelled[/]");
+            return ExitCode.Cancelled;
         }
         catch (InputException ex)
         {

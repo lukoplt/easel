@@ -24,16 +24,18 @@ easel rename <msapp> --from <old> --to <new> [--output <file.msapp>] [--keep-tem
 pac canvas unpack   →   rename identifier in pa.yaml   →   pac canvas pack   →   new .msapp
 ```
 
-Renaming is whole-word across the unpacked `pa.yaml` **and** legacy `fx.yaml` sources (a
-temp copy — never the input), so the repacked app stays consistent. Best suited to
-variables, collections and named formulas. After packing, the tool prints how many
+Renaming targets Power Fx identifier tokens across the unpacked `pa.yaml` **and** legacy
+`fx.yaml` sources (a temp copy — never the input). It supports global variables, context
+variables, collections and named formulas, including their definition sites. YAML comments,
+scalar styles and unrelated formatting are preserved. After packing, the tool prints how many
 occurrences changed and reminds you to verify in Studio.
 
 ### Caveats (why it's preview)
 
-- **String literals.** Whole-word matching cannot tell an identifier apart from the same
-  word inside a `"..."` string. If the old name also appears in a literal, the tool warns
-  (`⚠ 'x' also appears in N string literal(s)`) and you should review those in Studio.
+- **String literals.** Values inside `"..."` are intentionally left unchanged. If the old
+  name also appears in a literal, the tool warns
+  (`⚠ 'x' also appears in N string literal(s) — these were intentionally left unchanged`)
+  so you can decide whether those textual values need a separate edit in Studio.
 - **Collision.** If `--to` is already defined, the rename is refused (exit 2) before
   anything is written.
 - Verified end-to-end (unpack → rename → pack → unpack) against real apps; see the

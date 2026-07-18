@@ -32,15 +32,17 @@ public static class RenameCommand
             if (resolved.Kind != InputKind.Msapp)
                 throw new InputException(resolved.Message);
 
-            var pac = PacRunner.Create();
             var temp = PacRunner.TempFolderFor(input) + "-rename";
             if (Directory.Exists(temp)) Directory.Delete(temp, recursive: true);
 
-            AnsiConsole.MarkupLine("[grey]Unpacking via pac…[/]");
-            pac.UnpackMsapp(input, temp, line => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(line)}[/]"), AppCancellation.Token);
-
             try
             {
+                using var operation = AppCancellation.BeginOperation();
+                var pac = PacRunner.Create(AppCancellation.Token);
+                AnsiConsole.MarkupLine("[grey]Unpacking via pac…[/]");
+                pac.UnpackMsapp(input, temp,
+                    line => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(line)}[/]"), AppCancellation.Token);
+
                 var analysis = AppAnalysis.FromFolder(temp);
                 var result = RenameEngine.Rename(temp, from, to, analysis);
                 if (!result.Success)
@@ -51,7 +53,7 @@ public static class RenameCommand
                 if (result.StringLiteralHits > 0)
                     AnsiConsole.MarkupLine(
                         $"[yellow]⚠ '{Markup.Escape(from)}' also appears in {result.StringLiteralHits} string literal(s) " +
-                        "— these were changed too. Review them in Studio.[/]");
+                        "— these were intentionally left unchanged.[/]");
 
                 var outPath = output ?? DefaultOutput(input);
                 AnsiConsole.MarkupLine("[grey]Packing via pac…[/]");
