@@ -3,17 +3,17 @@
 class Easel < Formula
   desc "Static analysis for Power Apps canvas source (pa.yaml)"
   homepage "https://github.com/lukoplt/easel"
-  version "0.1.4"
+  version "0.1.5"
   license "MIT"
 
   on_macos do
-    url "https://github.com/lukoplt/easel/releases/download/v0.1.4/easel-osx-arm64.tar.gz"
-    sha256 "8e97c188495a6bac59e49870c27d4b477146b90a681dbec5b4a52b649e5e15b1"
+    url "https://github.com/lukoplt/easel/releases/download/v0.1.5/easel-osx-arm64.tar.gz"
+    sha256 "399b684021b7c66c8d96c27f88a57703ef4e4f8f7635fde606c3d5fbe12eb51e"
   end
 
   on_linux do
-    url "https://github.com/lukoplt/easel/releases/download/v0.1.4/easel-linux-x64.tar.gz"
-    sha256 "ddc1ba91cfe2c0c3dbc403430a7386b6aa51c664bf0798781bae0a24ac293ea7"
+    url "https://github.com/lukoplt/easel/releases/download/v0.1.5/easel-linux-x64.tar.gz"
+    sha256 "e9d9de5a7b9c530e55bb71c4e88faa949f64017f965b0e2b417c2059a0af3a7a"
   end
 
   def install

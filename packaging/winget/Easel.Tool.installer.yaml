@@ -1,6 +1,6 @@
 # winget installer manifest (schema 1.6). Placeholders (URL, Sha256) are filled at release time.
 PackageIdentifier: Easel.Tool
-PackageVersion: 0.1.4
+PackageVersion: 0.1.5
 InstallerType: zip
 NestedInstallerType: portable
 NestedInstallerFiles:
@@ -8,7 +8,7 @@ NestedInstallerFiles:
     PortableCommandAlias: easel
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/lukoplt/easel/releases/download/v0.1.4/easel-win-x64.zip
-    InstallerSha256: E8067F3A1ED0FAB41006F8A75216AF17D516D725F30D71280F4EB2A592DD4D6B
+    InstallerUrl: https://github.com/lukoplt/easel/releases/download/v0.1.5/easel-win-x64.zip
+    InstallerSha256: A016F0CEE667CB8B7BC46A3AF327D2A0861AD8FE31F13904A6CD028ADB01BDED
 ManifestType: installer
 ManifestVersion: 1.6.0
