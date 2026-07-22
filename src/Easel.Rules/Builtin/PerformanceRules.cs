@@ -252,3 +252,80 @@ public sealed class SequentialDataLoadRule : RuleBase
         }
     }
 }
+
+/// <summary>
+/// PA1019 — a formula references a control that lives on another screen, forcing that
+/// screen to load eagerly (App checker: "Inefficient delay loading"). Conservative:
+/// fires only for names with exactly one definition in the app, so shadowed or reused
+/// names never produce a false positive.
+/// </summary>
+public sealed class InefficientDelayedLoadRule : RuleBase
+{
+    public override string Id => "PA1019";
+    public override string Name => "inefficient-delayed-load";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Warning;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var def in ctx.Symbols.OfKind(SymbolKind.Control))
+        {
+            if (def.Scope is null) continue;
+            if (ctx.Symbols.DefinitionsOf(def.Name).Count != 1) continue;
+
+            var foreign = ctx.Symbols.Usages(def.Name)
+                .Where(u => !string.Equals(u.Scope, def.Scope, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (foreign.Count == 0) continue;
+
+            var where = string.Join(", ", foreign.Select(f => f.InPath).Distinct().Take(3));
+            yield return Report(
+                $"Control '{def.Name}' on '{def.Scope}' is referenced from {where} — forces '{def.Scope}' to load eagerly.",
+                foreign[0].Location, foreign[0].InPath,
+                help: "Cross-screen control references defeat delayed load. Share the value via a variable/collection or a Navigate context record.");
+        }
+    }
+}
+
+/// <summary>
+/// PA1028 — a Text input feeding a query (Filter/LookUp/Search) without DelayOutput.
+/// Every keystroke re-runs the query; DelayOutput batches input into ~half-second
+/// pauses (solution checker: app-use-delayoutput-text-input).
+/// </summary>
+public sealed class DelayOutputTextInputRule : RuleBase
+{
+    public override string Id => "PA1028";
+    public override string Name => "delay-output-text-input";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        // Text inputs that do not opt into DelayOutput, keyed by name.
+        var candidates = new Dictionary<string, (string Screen, Control Control)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var screen in ctx.Model.Screens)
+            foreach (var c in screen.AllControls())
+                if (BaseType(c) == "TextInput" && !A11y.IsTrue(c.GetProperty("DelayOutput")))
+                    candidates.TryAdd(c.Name, (screen.Name, c));
+        if (candidates.Count == 0) yield break;
+
+        var flagged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pr in ctx.Formulas())
+        {
+            var facts = ctx.Fx.Facts(pr.Property.Formula);
+            foreach (var query in facts.Calls.Where(c => c.IsAny(FormulaPerfPatterns.QueryFunctions)))
+            {
+                foreach (var (left, right) in FxFactsWalker.Collect(query.Node).DottedNames)
+                {
+                    if (!string.Equals(right, "Text", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!candidates.TryGetValue(left, out var hit) || !flagged.Add(left)) continue;
+
+                    yield return Report(
+                        $"Text input '{hit.Control.Name}' drives a query ({pr.Path}) without DelayOutput — the query runs on every keystroke.",
+                        hit.Control.Location, $"{hit.Screen}/{hit.Control.Name}",
+                        help: "Set DelayOutput to true so the query runs after a typing pause instead of per keystroke.");
+                }
+            }
+        }
+    }
+}

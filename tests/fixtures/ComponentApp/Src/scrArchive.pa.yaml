@@ -1,0 +1,17 @@
+Screens:
+  scrArchive:
+    Properties:
+      Fill: =RGBA(250, 250, 250, 1)
+    Children:
+      - lblRemote:
+          Control: Label@2.5.1
+          Properties:
+            Text: =btnSync.Text
+      - lblNote:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="Corporate iconography style"
+      - penSign:
+          Control: PenInput@2.1.0
+          Properties:
+            AccessibleLabel: ="Signature"

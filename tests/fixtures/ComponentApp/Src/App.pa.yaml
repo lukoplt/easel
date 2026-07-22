@@ -1,5 +1,6 @@
 App:
   Properties:
+    StartScreen: =scrOrders
     OnStart: |
       =Set(gblUser, User().FullName);
       Set(gblApiKey, "AKIAIOSFODNN7EXAMPLE");

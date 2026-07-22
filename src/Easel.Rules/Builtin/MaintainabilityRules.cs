@@ -54,14 +54,62 @@ public sealed class UnusedMediaRule : RuleBase
         {
             var byIdentifier = ctx.Symbols.ReadCount(media.Name) > 0;
             var byString = literals.Any(l =>
-                l.Contains(media.Name, StringComparison.OrdinalIgnoreCase) ||
-                (media.FileName is not null && l.Contains(media.FileName, StringComparison.OrdinalIgnoreCase)));
+                ContainsToken(l, media.Name) ||
+                (media.FileName is not null && ContainsToken(l, media.FileName)));
 
             if (!byIdentifier && !byString)
                 yield return Report(
                     $"Media asset '{media.FileName ?? media.Name}' is not referenced anywhere.",
                     media.Location, media.Name,
                     help: "Remove the unused asset to shrink the app package.");
+        }
+    }
+
+    /// <summary>
+    /// Whole-token containment: 'logo' matches in "https://x/logo.png" but not in
+    /// "logotype". A bare substring test masked genuinely unused media (App checker
+    /// parity: it reports assets easel used to consider referenced).
+    /// </summary>
+    public static bool ContainsToken(string text, string token)
+    {
+        if (token.Length == 0 || token.Length > text.Length) return false;
+        var idx = 0;
+        while ((idx = text.IndexOf(token, idx, StringComparison.OrdinalIgnoreCase)) >= 0)
+        {
+            var beforeOk = idx == 0 || !char.IsLetterOrDigit(text[idx - 1]);
+            var afterIdx = idx + token.Length;
+            var afterOk = afterIdx >= text.Length || !char.IsLetterOrDigit(text[afterIdx]);
+            if (beforeOk && afterOk) return true;
+            idx++;
+        }
+        return false;
+    }
+}
+
+/// <summary>
+/// PA1027 — a screen that nothing references. Fires only when App.StartScreen is set:
+/// with a known start screen every reachable screen is referenced somewhere (Navigate,
+/// StartScreen, or a formula), so a zero-reference screen is provably dead weight.
+/// </summary>
+public sealed class UnusedScreenRule : RuleBase
+{
+    public override string Id => "PA1027";
+    public override string Name => "unused-screen";
+    public override RuleCategory Category => RuleCategory.Maintainability;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        if (ctx.Model.Screens.Count < 2) yield break;
+        if (ctx.Model.App.GetProperty("StartScreen") is not { HasFormula: true }) yield break;
+
+        foreach (var screen in ctx.Model.Screens)
+        {
+            if (ctx.Symbols.ReadCount(screen.Name) > 0) continue;
+            yield return Report(
+                $"Screen '{screen.Name}' is never navigated to or referenced.",
+                screen.Location, screen.Name,
+                help: "Remove the screen, or add the Navigate(...) call that should reach it. Unused screens still cost load time.");
         }
     }
 }

@@ -124,6 +124,16 @@ Full reference: [`docs/rules.md`](docs/rules.md).
 | PA1016 | `CountRows(Filter(...))` instead of `CountIf` | Performance |
 | PA1017 | `First(Filter(...))` instead of `LookUp` | Performance |
 | PA1018 | Sequential data loads without `Concurrent` | Performance |
+| PA1019 | Cross-screen reference (inefficient delayed load) | Performance |
+| PA1020 | Invisible keyboard focus (`FocusedBorderThickness` 0) | Accessibility |
+| PA1021 | Audio/Video without closed captions | Accessibility |
+| PA1022 | Default screen name (`Screen1`, …) | Accessibility |
+| PA1023 | `TabIndex` greater than 0 | Accessibility |
+| PA1024 | Autostarting Audio/Video | Accessibility |
+| PA1025 | Stateful control hiding its value | Accessibility |
+| PA1026 | Pen input without alternative input | Accessibility |
+| PA1027 | Unused screen | Maintainability |
+| PA1028 | Query-driving Text input without `DelayOutput` | Performance |
 | PA2001 | Hardcoded secret (key/token/connection string) | Security |
 | PA2002 | High-entropy literal | Security |
 | PA2003 | URL with embedded credentials | Security |

@@ -45,3 +45,190 @@ public sealed class MissingAccessibleLabelRule : RuleBase
             || string.Equals(f, "Blank()", StringComparison.OrdinalIgnoreCase);
     }
 }
+
+/// <summary>Shared literal helpers for the accessibility rules.</summary>
+internal static class A11y
+{
+    /// <summary>A property whose formula is the literal <c>true</c>.</summary>
+    public static bool IsTrue(Property? p) =>
+        p is { HasFormula: true } && string.Equals(p.Formula.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>A property whose formula is the literal <c>false</c>.</summary>
+    public static bool IsFalse(Property? p) =>
+        p is { HasFormula: true } && string.Equals(p.Formula.Trim(), "false", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Numeric literal value of a property formula, or null when not a plain number.</summary>
+    public static decimal? AsNumber(Property? p) =>
+        p is { HasFormula: true } &&
+        decimal.TryParse(p.Formula.Trim(), System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var n)
+            ? n : null;
+
+    /// <summary>An empty string literal or Blank().</summary>
+    public static bool IsEmptyText(string formula)
+    {
+        var f = formula.Trim();
+        return f is "" or "\"\"" or "''"
+            || string.Equals(f, "Blank()", StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+/// <summary>PA1020 — FocusedBorderThickness of 0 makes keyboard focus invisible.</summary>
+public sealed class FocusNotVisibleRule : RuleBase
+{
+    public override string Id => "PA1020";
+    public override string Name => "focus-not-visible";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Warning;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var screen in ctx.Model.Screens)
+            foreach (var c in screen.AllControls())
+                if (A11y.AsNumber(c.GetProperty("FocusedBorderThickness")) == 0)
+                    yield return Report(
+                        $"Control '{c.Name}' has FocusedBorderThickness 0 — keyboard focus is invisible.",
+                        c.Location, $"{screen.Name}/{c.Name}",
+                        help: "Set FocusedBorderThickness above 0 so keyboard users can see where focus is.");
+    }
+}
+
+/// <summary>PA1021 — an Audio/Video control without closed captions.</summary>
+public sealed class MissingCaptionsRule : RuleBase
+{
+    public override string Id => "PA1021";
+    public override string Name => "missing-captions";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Warning;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var screen in ctx.Model.Screens)
+        {
+            foreach (var c in screen.AllControls())
+            {
+                if (BaseType(c) is not ("Audio" or "Video")) continue;
+                var url = c.GetProperty("ClosedCaptionsUrl");
+                if (url is { HasFormula: true } && !A11y.IsEmptyText(url.Formula)) continue;
+
+                yield return Report(
+                    $"{BaseType(c)} control '{c.Name}' has no ClosedCaptionsUrl.",
+                    c.Location, $"{screen.Name}/{c.Name}",
+                    help: "Provide WebVTT captions so users with hearing impairments get the content.");
+            }
+        }
+    }
+}
+
+/// <summary>PA1022 — a screen still has its default name (Screen1, Screen2, …).</summary>
+public sealed class DefaultScreenNameRule : RuleBase
+{
+    public override string Id => "PA1022";
+    public override string Name => "default-screen-name";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var screen in ctx.Model.Screens)
+        {
+            if (!IsDefaultName(screen.Name)) continue;
+            yield return Report(
+                $"Screen '{screen.Name}' has a default name.",
+                screen.Location, screen.Name,
+                help: "Screen readers announce screen names on navigation — use a name that describes the screen's purpose.");
+        }
+    }
+
+    private static bool IsDefaultName(string name) =>
+        name.StartsWith("Screen", StringComparison.OrdinalIgnoreCase)
+        && name["Screen".Length..].All(char.IsDigit);
+}
+
+/// <summary>PA1023 — a TabIndex greater than 0 (custom tab orders break screen readers).</summary>
+public sealed class PositiveTabIndexRule : RuleBase
+{
+    public override string Id => "PA1023";
+    public override string Name => "positive-tab-index";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var screen in ctx.Model.Screens)
+            foreach (var c in screen.AllControls())
+                if (A11y.AsNumber(c.GetProperty("TabIndex")) is > 0 and var ti)
+                    yield return Report(
+                        $"Control '{c.Name}' has TabIndex {ti} — custom tab orders are hard to maintain and break screen readers.",
+                        c.Location, $"{screen.Name}/{c.Name}",
+                        help: "Use TabIndex 0 (focusable, natural order) or -1; reorder with layout/containers instead.");
+    }
+}
+
+/// <summary>PA1024 — an Audio/Video control that starts playing automatically.</summary>
+public sealed class AutostartMediaRule : RuleBase
+{
+    public override string Id => "PA1024";
+    public override string Name => "autostart-media";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Warning;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var screen in ctx.Model.Screens)
+            foreach (var c in screen.AllControls())
+                if (BaseType(c) is "Audio" or "Video" && A11y.IsTrue(c.GetProperty("AutoStart")))
+                    yield return Report(
+                        $"{BaseType(c)} control '{c.Name}' autostarts.",
+                        c.Location, $"{screen.Name}/{c.Name}",
+                        help: "Autoplaying media is disorienting and hard to stop for keyboard users — let the user start playback.");
+    }
+}
+
+/// <summary>PA1025 — a stateful control (toggle, slider, rating) hides its value.</summary>
+public sealed class StateIndicationRule : RuleBase
+{
+    public override string Id => "PA1025";
+    public override string Name => "state-indication";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    private static readonly HashSet<string> Stateful = new(StringComparer.OrdinalIgnoreCase)
+        { "Toggle", "Slider", "Rating", "Checkbox" };
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var screen in ctx.Model.Screens)
+            foreach (var c in screen.AllControls())
+                if (Stateful.Contains(BaseType(c)) && A11y.IsFalse(c.GetProperty("ShowValue")))
+                    yield return Report(
+                        $"{BaseType(c)} '{c.Name}' has ShowValue false — its state is not announced.",
+                        c.Location, $"{screen.Name}/{c.Name}",
+                        help: "Set ShowValue to true so users get confirmation of the control's current state.");
+    }
+}
+
+/// <summary>PA1026 — a Pen input with no alternative text input on the same screen.</summary>
+public sealed class PenAlternativeInputRule : RuleBase
+{
+    public override string Id => "PA1026";
+    public override string Name => "pen-alternative-input";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var screen in ctx.Model.Screens)
+        {
+            var controls = screen.AllControls().ToList();
+            var pens = controls.Where(c => BaseType(c) is "PenInput").ToList();
+            if (pens.Count == 0 || controls.Any(c => BaseType(c) is "TextInput")) continue;
+
+            foreach (var pen in pens)
+                yield return Report(
+                    $"Pen control '{pen.Name}' has no alternative input method on screen '{screen.Name}'.",
+                    pen.Location, $"{screen.Name}/{pen.Name}",
+                    help: "Add a Text input next to the Pen control for users who cannot use a pen.");
+        }
+    }
+}

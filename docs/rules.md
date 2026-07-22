@@ -52,6 +52,18 @@ Two or more `Collect`/`ClearCollect` calls running sequentially in `OnStart`/`On
 outside a `Concurrent(...)`. Independent loads in `Concurrent` run in parallel and cut
 startup time. `{ min-loads: 2 }`.
 
+### PA1019 — inefficient-delayed-load · warning
+A formula references a control that lives on another screen, forcing that screen to load
+eagerly (App checker: *Inefficient delay loading*). Share the value via a variable,
+collection or `Navigate` context record instead. **Conservative:** fires only for control
+names with exactly one definition in the app, so shadowed or reused names never produce a
+false positive.
+
+### PA1028 — delay-output-text-input · info
+A Text input whose `.Text` feeds a `Filter`/`LookUp`/`Search` without `DelayOutput`
+enabled — the query re-runs on every keystroke (solution checker:
+*app-use-delayoutput-text-input*). Set `DelayOutput` to `true`.
+
 ---
 
 ## Maintainability
@@ -61,7 +73,9 @@ A variable (`Set`/`UpdateContext`) or collection (`Collect`/`ClearCollect`) that
 assigned but never read anywhere in the app.
 
 ### PA1004 — unused-media · info
-A media asset that is not referenced by identifier or by name in any formula.
+A media asset that is not referenced by identifier or by name in any formula. Name
+matching is whole-token: `logo` counts as referenced in `"https://x/logo.png"` but not in
+`"logotype"`, so a substring can never mask a genuinely unused asset.
 
 ### PA1008 — hardcoded-color · info
 A colour property (`Fill`, `Color`, `BorderColor`, …) using an `RGBA(...)` /
@@ -82,13 +96,50 @@ component. `{ min-length: 40, min-occurrences: 3 }`.
 ### PA1013 — inconsistent-control-version · info
 The same control type used at different `@version`s across the app.
 
+### PA1027 — unused-screen · info
+A screen that nothing references — no `Navigate`, no `StartScreen`, no formula. Fires
+only when `App.StartScreen` is set: with a known start screen a zero-reference screen is
+provably unreachable; without it the start screen cannot be determined from source, so
+the rule stays silent rather than guess.
+
 ---
 
 ## Accessibility
 
+Aligned with the Power Apps Studio Accessibility checker — each rule maps to one of its
+issue types.
+
 ### PA1009 — missing-accessible-label · warning
 An interactive control (button, input, toggle, …, or anything with `OnSelect`) with no
 non-empty `AccessibleLabel`.
+
+### PA1020 — focus-not-visible · warning
+A control with `FocusedBorderThickness` set to `0` — keyboard users cannot see where
+focus is. (*Focus isn't showing*.)
+
+### PA1021 — missing-captions · warning
+An `Audio`/`Video` control with no `ClosedCaptionsUrl`. (*Missing captions*.)
+
+### PA1022 — default-screen-name · info
+A screen still named `Screen1`, `Screen2`, … — screen readers announce screen names on
+navigation. (*Revise screen name*.)
+
+### PA1023 — positive-tab-index · info
+A control with `TabIndex` greater than `0`. Custom tab orders are hard to maintain and
+break screen readers — use `0`/`-1` and reorder with layout. (*Check the order of the
+screen items*.)
+
+### PA1024 — autostart-media · warning
+An `Audio`/`Video` control with `AutoStart` true. Autoplaying media is disorienting and
+hard to stop for keyboard users. (Solution checker: *app-avoid-autostart*.)
+
+### PA1025 — state-indication · info
+A stateful control (toggle, slider, rating, checkbox) with `ShowValue` false — users get
+no confirmation of its state. (*Add State indication text*.)
+
+### PA1026 — pen-alternative-input · info
+A `Pen` input on a screen with no `Text input` — some users cannot use a pen and need
+another way to provide the information. (*Add another input method*.)
 
 ---
 

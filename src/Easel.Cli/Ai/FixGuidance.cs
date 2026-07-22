@@ -39,6 +39,13 @@ public static class FixGuidance
             "Rewrite First(Filter(source, condition)) as LookUp(source, condition). " +
             "A trailing field access moves onto LookUp's third argument: " +
             "First(Filter(t, p)).Col becomes LookUp(t, p, Col).",
+        ["PA1019"] =
+            "Remove the cross-screen control reference: store the shared value in a variable at the " +
+            "moment it changes (Set in the source control's OnChange/OnSelect, or pass it in the " +
+            "Navigate context record) and reference that variable instead of ScreenB's control.",
+        ["PA1028"] =
+            "Keep the query formula, and set DelayOutput to true on the Text input control that feeds " +
+            "it, so the query re-runs after a typing pause instead of on every keystroke.",
         ["PA1018"] =
             "Wrap the independent Collect/ClearCollect calls in a single Concurrent(...): " +
             "Concurrent(ClearCollect(a, ...), ClearCollect(b, ...)). Only group loads that do not " +

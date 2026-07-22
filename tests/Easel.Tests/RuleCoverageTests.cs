@@ -20,6 +20,7 @@ public sealed class RuleCoverageTests
     [InlineData("PA1001")] // non-delegable query over Orders
     [InlineData("PA1002")] // ForAll + Patch
     [InlineData("PA1003")] // unused gblA..gblD
+    [InlineData("PA1004")] // icon.png unused ("iconography" is not a token match)
     [InlineData("PA1006")] // heavy OnStart
     [InlineData("PA1008")] // RGBA literal
     [InlineData("PA1011")] // timer side effect
@@ -30,6 +31,16 @@ public sealed class RuleCoverageTests
     [InlineData("PA1016")] // CountRows(Filter(...)) in lblStats
     [InlineData("PA1017")] // First(Filter(...)) in lblFirstOpen
     [InlineData("PA1018")] // two sequential ClearCollects in App.OnStart
+    [InlineData("PA1019")] // scrArchive/lblRemote reads btnSync.Text cross-screen
+    [InlineData("PA1020")] // btnSync FocusedBorderThickness 0
+    [InlineData("PA1021")] // vidPromo without ClosedCaptionsUrl
+    [InlineData("PA1022")] // default screen name Screen1
+    [InlineData("PA1023")] // lblDup1 TabIndex 2
+    [InlineData("PA1024")] // vidPromo AutoStart true
+    [InlineData("PA1025")] // tglNotify ShowValue false
+    [InlineData("PA1026")] // penSign with no TextInput on scrArchive
+    [InlineData("PA1027")] // scrArchive/Screen1 never referenced (StartScreen set)
+    [InlineData("PA1028")] // txtFilter drives Filter without DelayOutput
     [InlineData("PA2001")] // AKIA... key
     [InlineData("PA2003")] // url with creds
     [InlineData("PF0001")] // =Set(broken,

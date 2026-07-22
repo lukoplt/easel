@@ -11,11 +11,28 @@ Screens:
           Control: Classic/Button@2.2.0
           Properties:
             AccessibleLabel: ="Sync orders"
+            FocusedBorderThickness: =0
             OnSelect: |
               =ForAll(colTemp, Patch(Orders, Defaults(Orders), {Name: Value}))
+      - txtFilter:
+          Control: Classic/TextInput@2.3.1
+          Properties:
+            AccessibleLabel: ="Filter pairs"
+            Default: =""
+      - vidPromo:
+          Control: Video@2.1.0
+          Properties:
+            AccessibleLabel: ="Promo video"
+            AutoStart: =true
+      - tglNotify:
+          Control: Toggle@2.1.0
+          Properties:
+            AccessibleLabel: ="Notifications"
+            ShowValue: =false
       - lblDup1:
           Control: Label@2.5.1
           Properties:
+            TabIndex: =2
             Text: =Concatenate("Order total is ", Text(Sum(colTemp, Value), "[$-en]#,##0.00"), " today")
       - lblDup2:
           Control: Label@2.5.1
@@ -28,7 +45,7 @@ Screens:
       - lblStats:
           Control: Label@2.5.1
           Properties:
-            Text: =CountRows(Filter(colPairs, V <> ""))
+            Text: =CountRows(Filter(colPairs, V <> txtFilter.Text))
       - lblFirstOpen:
           Control: Label@2.5.1
           Properties:
