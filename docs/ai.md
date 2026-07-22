@@ -35,6 +35,20 @@ by re-parsing it with Power Fx before it is shown.
 easel fix <path> --rule PF0001 [--send] [--endpoint <url>] [--model <id>]
 ```
 
+**Fix procedures.** For rules with a known-good rewrite (all formula-level performance
+rules: PA1001, PA1002, PA1006, PA1014–PA1018) the prompt includes a deterministic repair
+procedure — e.g. *PA1016: rewrite `CountRows(Filter(source, condition))` as
+`CountIf(source, condition)`* — so the model follows the prescribed recipe instead of
+improvising.
+
+**Fix validation.** Beyond re-parsing, the suggestion is re-checked against the same AST
+pattern that produced the finding:
+
+- `✓ fix validated` — the performance anti-pattern is gone from the suggested formula,
+- `⚠ suggestion still triggers <rule>` — discard it, the pattern is still present,
+- for rules needing app-wide context (symbol table, delegation over a concrete data
+  source), re-run `easel lint` after applying the fix to verify.
+
 ## Provider
 
 The provider is **OpenAI-compatible** (`/v1/chat/completions`), so it works with:

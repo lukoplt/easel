@@ -65,6 +65,8 @@ public static class FixCommand
                 "You are a Power Apps expert. Return ONLY a corrected Power Fx formula (no prose, no code fences) " +
                 "that resolves the described issue while preserving intent.";
             var user = $"Issue: {finding.Message}\nRule: {finding.RuleId}\n\nCurrent formula:\n{formula}";
+            if (FixGuidance.For(finding.RuleId) is { } procedure)
+                user += $"\n\nFix procedure (follow it):\n{procedure}";
 
             var provider = LlmProviderFactory.Create(ai);
             AnsiConsole.MarkupLine($"[grey]provider: {provider.Name}[/]");
@@ -86,6 +88,23 @@ public static class FixCommand
             AnsiConsole.MarkupLine(parse.IsSuccess
                 ? "[green]✓ suggestion parses cleanly[/]"
                 : $"[yellow]⚠ suggestion does not parse — discard it:[/] {Markup.Escape(parse.Errors.FirstOrDefault()?.Message ?? "")}");
+
+            // Re-check the suggestion with the same pattern that produced the finding.
+            if (parse.IsSuccess)
+            {
+                switch (FixValidator.StillTriggers(finding.RuleId, suggestion.TrimStart('='), analysis.Fx))
+                {
+                    case false:
+                        AnsiConsole.MarkupLine($"[green]✓ fix validated — {Markup.Escape(finding.RuleId)} pattern no longer present[/]");
+                        break;
+                    case true:
+                        AnsiConsole.MarkupLine($"[yellow]⚠ suggestion still triggers {Markup.Escape(finding.RuleId)} — discard it[/]");
+                        break;
+                    case null:
+                        AnsiConsole.MarkupLine($"[grey]{Markup.Escape(finding.RuleId)} needs app-wide context — re-run `easel lint` after applying to verify[/]");
+                        break;
+                }
+            }
             return ExitCode.Ok;
         });
     }

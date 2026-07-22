@@ -25,6 +25,25 @@ Screens:
           Control: Label@2.4.0
           Properties:
             Text: =Concatenate("Order total is ", Text(Sum(colTemp, Value), "[$-en]#,##0.00"), " today")
+      - lblStats:
+          Control: Label@2.5.1
+          Properties:
+            Text: =CountRows(Filter(colPairs, V <> ""))
+      - lblFirstOpen:
+          Control: Label@2.5.1
+          Properties:
+            Text: =First(Filter(colTemp, Value > 10)).Value
+      - lblRepeat:
+          Control: Label@2.5.1
+          Properties:
+            Text: |
+              =If(LookUp(colStatuses, Value = "Open", Value) = "Open", LookUp(colStatuses, Value = "Open", Value), "none")
+      - btnNested:
+          Control: Classic/Button@2.2.0
+          Properties:
+            AccessibleLabel: ="Rebuild pairs"
+            OnSelect: |
+              =ForAll(colTemp, ForAll(colStatuses, Collect(colPairs, {V: Value})))
       - tmrPoll:
           Control: Timer@2.1.0
           Properties:

@@ -25,6 +25,11 @@ public sealed class RuleCoverageTests
     [InlineData("PA1011")] // timer side effect
     [InlineData("PA1012")] // duplicate Concatenate
     [InlineData("PA1013")] // Label 2.5.1 vs 2.4.0
+    [InlineData("PA1014")] // nested ForAll in btnNested
+    [InlineData("PA1015")] // repeated LookUp in lblRepeat
+    [InlineData("PA1016")] // CountRows(Filter(...)) in lblStats
+    [InlineData("PA1017")] // First(Filter(...)) in lblFirstOpen
+    [InlineData("PA1018")] // two sequential ClearCollects in App.OnStart
     [InlineData("PA2001")] // AKIA... key
     [InlineData("PA2003")] // url with creds
     [InlineData("PF0001")] // =Set(broken,

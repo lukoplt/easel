@@ -29,6 +29,29 @@ or components. `{ max: <int> }`.
 `App.OnStart` with many assignments or a large AST. Move derived values to named formulas
 (`App.Formulas`) so they evaluate lazily. `{ max-assignments: 6, max-nodes: 80 }`.
 
+### PA1014 — nested-forall · warning
+A `ForAll` nested inside another `ForAll` — O(n²) row iteration. Precompute the inner
+lookup once (`With` / `AddColumns` / `GroupBy`) instead of re-iterating per row.
+
+### PA1015 — repeated-expensive-call · warning
+The same expensive call (`LookUp`/`Filter`/`Sort`/`Sum`/…) repeated verbatim within one
+formula — each occurrence re-evaluates the query. Wrap it in
+`With({result: <call>}, …)` and reuse. `{ min-length: 20, min-occurrences: 2 }`.
+
+### PA1016 — countrows-filter · info
+`CountRows(Filter(source, condition))` materialises the filtered table just to count it.
+Use `CountIf(source, condition)` — it counts without materialising and delegates on more
+sources.
+
+### PA1017 — first-filter · info
+`First(Filter(source, condition))` fetches a whole filtered table to use one row. Use
+`LookUp(source, condition)` (with an optional third argument for the field).
+
+### PA1018 — sequential-data-loads · info
+Two or more `Collect`/`ClearCollect` calls running sequentially in `OnStart`/`OnVisible`
+outside a `Concurrent(...)`. Independent loads in `Concurrent` run in parallel and cut
+startup time. `{ min-loads: 2 }`.
+
 ---
 
 ## Maintainability

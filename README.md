@@ -119,6 +119,11 @@ Full reference: [`docs/rules.md`](docs/rules.md).
 | PA1011 | Timer side-effects | Maintainability |
 | PA1012 | Duplicate formula | Maintainability |
 | PA1013 | Inconsistent control version | Maintainability |
+| PA1014 | Nested `ForAll` (O(n²) iteration) | Performance |
+| PA1015 | Repeated expensive call in one formula | Performance |
+| PA1016 | `CountRows(Filter(...))` instead of `CountIf` | Performance |
+| PA1017 | `First(Filter(...))` instead of `LookUp` | Performance |
+| PA1018 | Sequential data loads without `Concurrent` | Performance |
 | PA2001 | Hardcoded secret (key/token/connection string) | Security |
 | PA2002 | High-entropy literal | Security |
 | PA2003 | URL with embedded credentials | Security |

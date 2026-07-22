@@ -68,29 +68,17 @@ public sealed class NPlusOneRule : RuleBase
     public override RuleCategory Category => RuleCategory.Performance;
     public override Severity DefaultSeverity => Severity.Warning;
 
-    private static readonly string[] DataOps = { "Patch", "Collect", "Remove", "RemoveIf", "LookUp", "Update", "UpdateIf" };
-
     public override IEnumerable<Finding> Evaluate(RuleContext ctx)
     {
         foreach (var pr in ctx.Formulas())
         {
-            var facts = ctx.Fx.Facts(pr.Property.Formula);
-            var reported = false;
-            foreach (var forAll in facts.Calls.Where(c => c.Is("ForAll")))
-            {
-                if (reported) break;
-                // Only the loop BODY (last argument) counts — a data op in the source
-                // table argument is a normal query, not an N+1.
-                var body = forAll.Arg(forAll.Args.Count - 1);
-                if (body is not null && forAll.Args.Count >= 2 && AstMetrics.ContainsCall(body, DataOps))
-                {
-                    reported = true;
-                    yield return Report(
-                        "ForAll performs a per-row data operation (N+1 pattern).",
-                        pr.Property.Location, pr.Path,
-                        help: "Batch the operation: build a table and Patch/Collect once instead of per row.");
-                }
-            }
+            // Only the loop BODY (last argument) counts — a data op in the source
+            // table argument is a normal query, not an N+1.
+            if (FormulaPerfPatterns.PerRowDataOp(ctx.Fx.Facts(pr.Property.Formula)))
+                yield return Report(
+                    "ForAll performs a per-row data operation (N+1 pattern).",
+                    pr.Property.Location, pr.Path,
+                    help: "Batch the operation: build a table and Patch/Collect once instead of per row.");
         }
     }
 }
@@ -107,17 +95,13 @@ public sealed class DelegationRule : RuleBase
     public override RuleCategory Category => RuleCategory.Performance;
     public override Severity DefaultSeverity => Severity.Warning;
 
-    private static readonly string[] QueryFns = { "Filter", "LookUp", "Search" };
-    private static readonly string[] NonDelegable =
-        { "Concat", "CountRows", "Last", "GroupBy", "Ungroup", "ForAll", "Split", "MatchAll" };
-
     public override IEnumerable<Finding> Evaluate(RuleContext ctx)
     {
         foreach (var pr in ctx.Formulas())
         {
             var facts = ctx.Fx.Facts(pr.Property.Formula);
             var reported = false;
-            foreach (var q in facts.Calls.Where(c => c.IsAny(QueryFns)))
+            foreach (var q in facts.Calls.Where(c => c.IsAny(FormulaPerfPatterns.QueryFunctions)))
             {
                 if (reported) break;
                 if (q.Arg(0) is not Microsoft.PowerFx.Syntax.FirstNameNode src) continue;
@@ -126,7 +110,7 @@ public sealed class DelegationRule : RuleBase
                 // component prop…) is not assumed to be a remote source — stay conservative.
                 if (!ctx.Symbols.DefinitionsOf(name).Any(d => d.Kind == SymbolKind.DataSource)) continue;
 
-                if (AstMetrics.ContainsCall(q.Node, NonDelegable))
+                if (AstMetrics.ContainsCall(q.Node, FormulaPerfPatterns.NonDelegableFunctions))
                 {
                     reported = true;
                     yield return Report(
@@ -135,6 +119,136 @@ public sealed class DelegationRule : RuleBase
                         help: "Non-delegable operations run only over the first 500–2000 rows. Pre-filter server-side.");
                 }
             }
+        }
+    }
+}
+
+/// <summary>PA1014 — ForAll nested inside another ForAll (quadratic row iteration).</summary>
+public sealed class NestedForAllRule : RuleBase
+{
+    public override string Id => "PA1014";
+    public override string Name => "nested-forall";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Warning;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var pr in ctx.Formulas())
+        {
+            var parse = ctx.Fx.Parse(pr.Property.Formula);
+            if (parse is not { IsSuccess: true, Root: not null }) continue;
+            if (FormulaPerfPatterns.NestedForAll(parse.Root))
+                yield return Report(
+                    "ForAll nested inside another ForAll — O(n²) row iteration.",
+                    pr.Property.Location, pr.Path,
+                    help: "Precompute the inner lookup once (With/AddColumns/GroupBy) instead of re-iterating per row.");
+        }
+    }
+}
+
+/// <summary>
+/// PA1015 — the same expensive call (LookUp/Filter/Sort/…) repeated verbatim within one
+/// formula. Each occurrence re-evaluates the query.
+/// </summary>
+public sealed class RepeatedExpensiveCallRule : RuleBase
+{
+    public override string Id => "PA1015";
+    public override string Name => "repeated-expensive-call";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Warning;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        var minLength = ctx.Options.Child("min-length").AsInt() ?? 20;
+        var minOccurrences = ctx.Options.Child("min-occurrences").AsInt() ?? 2;
+
+        foreach (var pr in ctx.Formulas())
+        {
+            var facts = ctx.Fx.Facts(pr.Property.Formula);
+            foreach (var (source, count) in FormulaPerfPatterns.RepeatedExpensiveCalls(
+                         pr.Property.Formula, facts, minLength, minOccurrences))
+            {
+                var snippet = source.Length > 60 ? source[..57] + "..." : source;
+                yield return Report(
+                    $"'{snippet}' is evaluated {count}× in this formula.",
+                    pr.Property.Location, pr.Path,
+                    help: "Evaluate once and reuse: With({result: <call>}, ... result ... result ...).");
+            }
+        }
+    }
+}
+
+/// <summary>PA1016 — CountRows(Filter(...)) materialises the filtered table just to count it.</summary>
+public sealed class CountRowsFilterRule : RuleBase
+{
+    public override string Id => "PA1016";
+    public override string Name => "countrows-filter";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var pr in ctx.Formulas())
+        {
+            if (FormulaPerfPatterns.CountRowsOverFilter(ctx.Fx.Facts(pr.Property.Formula)))
+                yield return Report(
+                    "CountRows(Filter(...)) — use CountIf(source, condition) instead.",
+                    pr.Property.Location, pr.Path,
+                    help: "CountIf counts without materialising the filtered table and delegates on more sources.");
+        }
+    }
+}
+
+/// <summary>PA1017 — First(Filter(...)) fetches a whole filtered table to use one row.</summary>
+public sealed class FirstFilterRule : RuleBase
+{
+    public override string Id => "PA1017";
+    public override string Name => "first-filter";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        foreach (var pr in ctx.Formulas())
+        {
+            if (FormulaPerfPatterns.FirstOverFilter(ctx.Fx.Facts(pr.Property.Formula)))
+                yield return Report(
+                    "First(Filter(...)) — use LookUp(source, condition) instead.",
+                    pr.Property.Location, pr.Path,
+                    help: "LookUp stops at the first match and delegates; First(Filter(...)) may pull many rows.");
+        }
+    }
+}
+
+/// <summary>
+/// PA1018 — several Collect/ClearCollect calls run sequentially in a startup/navigation
+/// property when Concurrent() could load them in parallel.
+/// </summary>
+public sealed class SequentialDataLoadRule : RuleBase
+{
+    public override string Id => "PA1018";
+    public override string Name => "sequential-data-loads";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    private static readonly string[] TriggerProperties = { "OnStart", "OnVisible" };
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        var min = ctx.Options.Child("min-loads").AsInt() ?? 2;
+
+        foreach (var pr in ctx.Formulas())
+        {
+            if (!TriggerProperties.Contains(pr.Property.Name, StringComparer.OrdinalIgnoreCase)) continue;
+            var parse = ctx.Fx.Parse(pr.Property.Formula);
+            if (parse is not { IsSuccess: true, Root: not null }) continue;
+
+            var loads = FormulaPerfPatterns.SequentialDataLoads(parse.Root);
+            if (loads >= min)
+                yield return Report(
+                    $"{loads} sequential data loads in {pr.Property.Name} — wrap independent ones in Concurrent().",
+                    pr.Property.Location, pr.Path,
+                    help: "Concurrent(ClearCollect(a, ...), ClearCollect(b, ...)) loads in parallel and cuts startup time.");
         }
     }
 }

@@ -7,6 +7,8 @@ App:
       Set(gblA, 1);
       Set(gblB, 2);
       Set(gblC, 3);
-      Set(gblD, 4)
+      Set(gblD, 4);
+      ClearCollect(colTemp, [1, 2, 3]);
+      ClearCollect(colStatuses, ["Open", "Closed"])
   Formulas:
     AppTitle: ="Orders"
