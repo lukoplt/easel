@@ -15,3 +15,26 @@ Screens:
           Control: PenInput@2.1.0
           Properties:
             AccessibleLabel: ="Signature"
+      - btnGoNowhere:
+          Control: Classic/Button@2.2.0
+          Properties:
+            AccessibleLabel: ="Open missing screen"
+            OnSelect: =Navigate(scrMissing)
+      - lblTypo:
+          Control: Label@2.5.1
+          Properties:
+            Text: =txtFiltr.Text
+      - lblArity:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Left("abc")
+      - lblFn:
+          Control: Label@2.5.1
+          Properties:
+            Text: =Concatt("a", "b")
+      - lblLowContrast:
+          Control: Label@2.5.1
+          Properties:
+            Text: ="Fine print"
+            Color: =RGBA(200, 200, 200, 1)
+            Fill: =RGBA(255, 255, 255, 1)

@@ -41,6 +41,12 @@ public sealed class RuleCoverageTests
     [InlineData("PA1026")] // penSign with no TextInput on scrArchive
     [InlineData("PA1027")] // scrArchive/Screen1 never referenced (StartScreen set)
     [InlineData("PA1028")] // txtFilter drives Filter without DelayOutput
+    [InlineData("PA1030")] // lblLowContrast grey-on-white
+    [InlineData("PA1031")] // Unused.json data source never referenced
+    [InlineData("PF0002")] // Navigate(scrMissing) — screen does not exist
+    [InlineData("PF0003")] // txtFiltr.Text — one edit from txtFilter
+    [InlineData("PF0004")] // Left("abc") — needs 2 arguments
+    [InlineData("PF0005")] // Concatt(...) — unknown function
     [InlineData("PA2001")] // AKIA... key
     [InlineData("PA2003")] // url with creds
     [InlineData("PF0001")] // =Set(broken,
@@ -61,6 +67,13 @@ public sealed class RuleCoverageTests
     {
         var f = Lint("ComponentApp", "rules:\n  screen-control-limit:\n    max: 2\n");
         Assert.Contains(f, x => x.RuleId == "PA1005");
+    }
+
+    [Fact]
+    public void PA1029_fires_when_limit_lowered()
+    {
+        var f = Lint("ComponentApp", "rules:\n  large-media:\n    max-kb: 0\n");
+        Assert.Contains(f, x => x.RuleId == "PA1029");
     }
 
     [Fact]

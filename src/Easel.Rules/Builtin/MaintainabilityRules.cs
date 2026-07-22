@@ -114,6 +114,34 @@ public sealed class UnusedScreenRule : RuleBase
     }
 }
 
+/// <summary>PA1031 — a data source the app binds to but never queries or writes.</summary>
+public sealed class UnusedDataSourceRule : RuleBase
+{
+    public override string Id => "PA1031";
+    public override string Name => "unused-datasource";
+    public override RuleCategory Category => RuleCategory.Maintainability;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    /// <summary>Studio ships these in every canvas app — not maker-removable noise.</summary>
+    private static readonly HashSet<string> BuiltinSources = new(StringComparer.OrdinalIgnoreCase)
+        { "Connections", "ComboBoxSample", "CustomGallerySample", "DropDownSample", "SampleImage" };
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        var allow = new HashSet<string>(ctx.Options.Child("allow").AsStringList(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var ds in ctx.Model.DataSources)
+        {
+            if (BuiltinSources.Contains(ds.Name) || allow.Contains(ds.Name)) continue;
+            if (ctx.Symbols.ReadCount(ds.Name) > 0) continue;
+            yield return Report(
+                $"Data source '{ds.Name}' is never referenced.",
+                ds.Location, ds.Name,
+                help: "Every bound data source costs connection setup at app start — remove ones the app does not use.");
+        }
+    }
+}
+
 /// <summary>PA1012 — the same non-trivial formula is duplicated across the app.</summary>
 public sealed class DuplicateFormulaRule : RuleBase
 {

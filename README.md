@@ -134,11 +134,18 @@ Full reference: [`docs/rules.md`](docs/rules.md).
 | PA1026 | Pen input without alternative input | Accessibility |
 | PA1027 | Unused screen | Maintainability |
 | PA1028 | Query-driving Text input without `DelayOutput` | Performance |
+| PA1029 | Oversized embedded media | Performance |
+| PA1030 | Text/fill contrast below WCAG AA | Accessibility |
+| PA1031 | Unused data source | Maintainability |
 | PA2001 | Hardcoded secret (key/token/connection string) | Security |
 | PA2002 | High-entropy literal | Security |
 | PA2003 | URL with embedded credentials | Security |
 | PA0002 | Source file failed to load | Error |
 | PF0001 | Unparsable formula | Error |
+| PF0002 | Navigate/SetFocus to a nonexistent target | Error |
+| PF0003 | Possible typo (one edit from a defined symbol) | Error |
+| PF0004 | Wrong argument count for a built-in function | Error |
+| PF0005 | Unknown function | Error |
 
 ## CI
 

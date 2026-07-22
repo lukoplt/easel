@@ -64,6 +64,11 @@ A Text input whose `.Text` feeds a `Filter`/`LookUp`/`Search` without `DelayOutp
 enabled — the query re-runs on every keystroke (solution checker:
 *app-use-delayoutput-text-input*). Set `DelayOutput` to `true`.
 
+### PA1029 — large-media · info
+An embedded media asset larger than the limit (`max-kb`, default **300**). Large media
+slows app download and load — compress, lower resolution, or prefer SVG.
+`{ max-kb: <int> }`.
+
 ---
 
 ## Maintainability
@@ -95,6 +100,10 @@ component. `{ min-length: 40, min-occurrences: 3 }`.
 
 ### PA1013 — inconsistent-control-version · info
 The same control type used at different `@version`s across the app.
+
+### PA1031 — unused-datasource · info
+A data source the app binds to but never references. Every bound source costs connection
+setup at app start.
 
 ### PA1027 — unused-screen · info
 A screen that nothing references — no `Navigate`, no `StartScreen`, no formula. Fires
@@ -140,6 +149,11 @@ no confirmation of its state. (*Add State indication text*.)
 ### PA1026 — pen-alternative-input · info
 A `Pen` input on a screen with no `Text input` — some users cannot use a pen and need
 another way to provide the information. (*Add another input method*.)
+
+### PA1030 — low-contrast · info
+Text colour vs fill contrast below WCAG AA (`min-ratio`, default **4.5**:1). Checked only
+when both `Color` and `Fill` are opaque `RGBA(...)` literals on the same control — easel
+never guesses inherited or computed colours. `{ min-ratio: <number> }`.
 
 ---
 
@@ -187,3 +201,29 @@ in Power Apps Studio.
 A formula Power Fx could not parse. Fix the syntax, or (for legacy apps) re-open and
 re-save in Power Apps Studio to export the current `pa.yaml` format. easel never crashes
 on an unparsable formula — it reports it and continues.
+
+### PF0002 — unknown-navigation-target · error
+`Navigate(...)` or `SetFocus(...)` whose first argument is a name defined nowhere in the
+app. The App checker reports this class of issue as a formula error; easel checks the
+navigation functions statically, without needing live binding.
+
+### PF0003 — possible-typo · warning
+An identifier that resolves to nothing in the app but is one edit away from a defined
+symbol (`txtSerch` → `txtSearch`). Names a formula introduces itself (`With` fields,
+`As` aliases), record-scope fields and built-in identifiers are exempt, so gallery and
+filter field names never false-positive.
+
+### PF0004 — wrong-argument-count · error
+A built-in function called with an argument count outside its documented signature
+(`Left("abc")` — needs 2). Bounds come from a curated catalog of ~150 functions;
+functions outside the catalog are never flagged.
+
+### PF0005 — unknown-function · warning
+A call to a function that is neither a known built-in nor defined in the app (named
+formula / user-defined function). Namespaced calls (`Calendar.MonthsLong()`, component
+functions) are skipped. Intentional names go under the rule's `allow` list:
+
+```yaml
+unknown-function:
+  allow: [MyCustomConnectorAction]
+```

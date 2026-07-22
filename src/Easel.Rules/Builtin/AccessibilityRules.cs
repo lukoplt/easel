@@ -208,6 +208,76 @@ public sealed class StateIndicationRule : RuleBase
     }
 }
 
+/// <summary>
+/// PA1030 — text colour vs fill contrast below WCAG AA (4.5:1). Checked only when both
+/// Color and Fill are opaque RGBA literals on the same control, so it never guesses at
+/// inherited or computed colours.
+/// </summary>
+public sealed class LowContrastRule : RuleBase
+{
+    public override string Id => "PA1030";
+    public override string Name => "low-contrast";
+    public override RuleCategory Category => RuleCategory.Accessibility;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        var minRatio = ctx.Options.Child("min-ratio").AsDouble() ?? 4.5;
+
+        foreach (var screen in ctx.Model.Screens)
+        {
+            foreach (var c in screen.AllControls())
+            {
+                var fg = ParseOpaqueRgba(c.GetProperty("Color")?.Formula);
+                var bg = ParseOpaqueRgba(c.GetProperty("Fill")?.Formula);
+                if (fg is null || bg is null) continue;
+
+                var ratio = ContrastRatio(fg.Value, bg.Value);
+                if (ratio >= minRatio) continue;
+
+                yield return Report(
+                    $"Control '{c.Name}' text contrast is {ratio:0.0}:1 (minimum {minRatio}:1).",
+                    c.Location, $"{screen.Name}/{c.Name}",
+                    help: "Users with low vision cannot read low-contrast text. Darken the text or lighten the fill (WCAG AA needs 4.5:1).");
+            }
+        }
+    }
+
+    /// <summary>Parses an <c>RGBA(r, g, b, 1)</c> literal; null for anything else (incl. translucency).</summary>
+    public static (int R, int G, int B)? ParseOpaqueRgba(string? formula)
+    {
+        if (formula is null) return null;
+        var f = formula.Trim();
+        if (!f.StartsWith("RGBA(", StringComparison.OrdinalIgnoreCase) || !f.EndsWith(')')) return null;
+        var parts = f["RGBA(".Length..^1].Split(',');
+        if (parts.Length != 4) return null;
+        if (!int.TryParse(parts[0].Trim(), out var r) || !int.TryParse(parts[1].Trim(), out var g)
+            || !int.TryParse(parts[2].Trim(), out var b)) return null;
+        if (!double.TryParse(parts[3].Trim(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var a) || a < 1) return null;
+        return (r, g, b);
+    }
+
+    /// <summary>WCAG relative-luminance contrast ratio, always ≥ 1.</summary>
+    public static double ContrastRatio((int R, int G, int B) c1, (int R, int G, int B) c2)
+    {
+        var l1 = Luminance(c1);
+        var l2 = Luminance(c2);
+        var (hi, lo) = l1 >= l2 ? (l1, l2) : (l2, l1);
+        return (hi + 0.05) / (lo + 0.05);
+    }
+
+    private static double Luminance((int R, int G, int B) c)
+    {
+        static double Chan(int v)
+        {
+            var s = v / 255.0;
+            return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * Chan(c.R) + 0.7152 * Chan(c.G) + 0.0722 * Chan(c.B);
+    }
+}
+
 /// <summary>PA1026 — a Pen input with no alternative text input on the same screen.</summary>
 public sealed class PenAlternativeInputRule : RuleBase
 {

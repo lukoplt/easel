@@ -39,6 +39,18 @@ public static class FixGuidance
             "Rewrite First(Filter(source, condition)) as LookUp(source, condition). " +
             "A trailing field access moves onto LookUp's third argument: " +
             "First(Filter(t, p)).Col becomes LookUp(t, p, Col).",
+        ["PF0002"] =
+            "Replace the Navigate/SetFocus target with the name of a screen/control that exists in " +
+            "the app. Do not invent new names — pick the closest existing one that matches the intent.",
+        ["PF0003"] =
+            "Replace the misspelled identifier with the defined symbol suggested in the finding, " +
+            "changing nothing else in the formula.",
+        ["PF0004"] =
+            "Adjust the call to the documented signature by adding the missing argument(s) or " +
+            "removing the extra ones, preserving the formula's intent.",
+        ["PF0005"] =
+            "Replace the unknown function with the correctly spelled built-in (check the Power Fx " +
+            "formula reference), or with the intended user-defined formula name.",
         ["PA1019"] =
             "Remove the cross-screen control reference: store the shared value in a variable at the " +
             "moment it changes (Set in the source control's OnChange/OnSelect, or pass it in the " +

@@ -110,11 +110,14 @@ public sealed class DelegationRule : RuleBase
                 // component prop…) is not assumed to be a remote source — stay conservative.
                 if (!ctx.Symbols.DefinitionsOf(name).Any(d => d.Kind == SymbolKind.DataSource)) continue;
 
-                if (AstMetrics.ContainsCall(q.Node, FormulaPerfPatterns.NonDelegableFunctions))
+                var nonDelegableCall = AstMetrics.ContainsCall(q.Node, FormulaPerfPatterns.NonDelegableFunctions);
+                var inOperator = FormulaPerfPatterns.ContainsInOperator(q.Node);
+                if (nonDelegableCall || inOperator)
                 {
                     reported = true;
+                    var cause = nonDelegableCall ? "non-delegable function" : "'in' operator, often non-delegable,";
                     yield return Report(
-                        $"{q.Name} over '{name}' may not delegate (non-delegable function in the query).",
+                        $"{q.Name} over '{name}' may not delegate ({cause} in the query).",
                         pr.Property.Location, pr.Path,
                         help: "Non-delegable operations run only over the first 500–2000 rows. Pre-filter server-side.");
                 }
@@ -253,6 +256,28 @@ public sealed class SequentialDataLoadRule : RuleBase
     }
 }
 
+/// <summary>PA1029 — an embedded media asset larger than the configured limit.</summary>
+public sealed class LargeMediaRule : RuleBase
+{
+    public override string Id => "PA1029";
+    public override string Name => "large-media";
+    public override RuleCategory Category => RuleCategory.Performance;
+    public override Severity DefaultSeverity => Severity.Info;
+
+    public override IEnumerable<Finding> Evaluate(RuleContext ctx)
+    {
+        var maxKb = ctx.Options.Child("max-kb").AsInt() ?? 300;
+        foreach (var media in ctx.Model.Media)
+        {
+            if (media.SizeBytes is not { } size || size <= maxKb * 1024L) continue;
+            yield return Report(
+                $"Media asset '{media.FileName ?? media.Name}' is {size / 1024} KB (limit {maxKb} KB).",
+                media.Location, media.Name,
+                help: "Large embedded media slows app download and load. Compress it, lower its resolution, or prefer SVG.");
+        }
+    }
+}
+
 /// <summary>
 /// PA1019 — a formula references a control that lives on another screen, forcing that
 /// screen to load eagerly (App checker: "Inefficient delay loading"). Conservative:
@@ -268,6 +293,20 @@ public sealed class InefficientDelayedLoadRule : RuleBase
 
     public override IEnumerable<Finding> Evaluate(RuleContext ctx)
     {
+        // How each formula uses each name — a control whose name collides with an
+        // entity column (bare inside Filter scope, DataSourceInfo column arg) is a
+        // column mention there, not a cross-screen reference.
+        var byPath = ctx.Formulas().ToDictionary(p => p.Path, StringComparer.OrdinalIgnoreCase);
+        var classifiers = new Dictionary<string, FxNameClassifier?>(StringComparer.OrdinalIgnoreCase);
+        FxNameClassifier? ClassifierFor(string path)
+        {
+            if (classifiers.TryGetValue(path, out var cached)) return cached;
+            var parse = byPath.TryGetValue(path, out var p) ? ctx.Fx.Parse(p.Property.Formula) : null;
+            var c = parse is { IsSuccess: true, Root: not null } ? FxNameClassifier.Collect(parse.Root) : null;
+            classifiers[path] = c;
+            return c;
+        }
+
         foreach (var def in ctx.Symbols.OfKind(SymbolKind.Control))
         {
             if (def.Scope is null) continue;
@@ -275,6 +314,7 @@ public sealed class InefficientDelayedLoadRule : RuleBase
 
             var foreign = ctx.Symbols.Usages(def.Name)
                 .Where(u => !string.Equals(u.Scope, def.Scope, StringComparison.OrdinalIgnoreCase))
+                .Where(u => ClassifierFor(u.InPath)?.IsStructuralReference(def.Name) == true)
                 .ToList();
             if (foreign.Count == 0) continue;
 

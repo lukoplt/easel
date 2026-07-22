@@ -88,8 +88,26 @@ public static class FormulaPerfPatterns
                      .ToList();
     }
 
+    /// <summary>True when the subtree contains an <c>in</c>/<c>exactin</c> operator.</summary>
+    public static bool ContainsInOperator(TexlNode root)
+    {
+        var v = new InOpVisitor();
+        root.Accept(v);
+        return v.Found;
+    }
+
     private static string NormalizeWhitespace(string s) =>
         string.Join(' ', s.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    private sealed class InOpVisitor : IdentityTexlVisitor
+    {
+        public bool Found { get; private set; }
+        public override bool PreVisit(BinaryOpNode node)
+        {
+            if (node.Op is BinaryOp.In or BinaryOp.Exactin) Found = true;
+            return !Found;
+        }
+    }
 
     private sealed class SequentialLoadVisitor : IdentityTexlVisitor
     {
